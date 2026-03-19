@@ -631,46 +631,13 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- Parametric BBC: fit non-linear color dependence ---
-    # The Tripp formula already fits linear c and mass step terms.
-    # The P23 bias has a non-linear component (quadratic+) from the
-    # dust/intrinsic mixture. Fit a quadratic in c (by mass bin) to
-    # the Hubble residuals and subtract. Uses only ~4 parameters,
-    # preserving nearly all velocity signal (vs ~30 for binning).
-    # No hardcoded P23 parameters — data-driven.
-
-    c_masked = c[mask]
-    log_mass_masked = obs["log_mass"][mask]
-    high_mass_masked = (log_mass_masked > 10.0).astype(float)
-    delta_mu_masked = tripp["delta_mu"][mask]
-    sigma_mu_masked = tripp["sigma_mu"][mask]
-    J_z_masked = vel["J_z"][mask]
-
-    # Fit: delta_mu = a0*c^2 + a1*c^2*high_mass + a2*c^3 + a3*c^3*high_mass
-    # (constant, linear c, and mass step already absorbed by Tripp)
-    c2 = c_masked**2
-    c3 = c_masked**3
-    X = np.column_stack([c2, c2 * high_mass_masked, c3, c3 * high_mass_masked])
-    w = 1.0 / sigma_mu_masked**2
-
-    # Weighted least squares: (X^T W X)^{-1} X^T W y
-    Xw = X * w[:, None]
-    try:
-        coeffs = np.linalg.solve(Xw.T @ X, Xw.T @ delta_mu_masked)
-        mu_correction = X @ coeffs
-    except np.linalg.LinAlgError:
-        mu_correction = np.zeros_like(delta_mu_masked)
-
-    delta_mu_corr = delta_mu_masked - mu_correction
-    v_corr = J_z_masked * delta_mu_corr
-
     return {
-        "velocities": v_corr,
+        "velocities": vel["v_est"][mask],
         "sigma_v": vel["sigma_v"][mask],
         "n_sn": int(np.sum(mask)),
-        "delta_mu": delta_mu_corr,
-        "colors": c_masked,
+        "delta_mu": tripp["delta_mu"][mask],
+        "colors": c[mask],
         "x1": x1[mask],
         "z": obs["z_obs"][mask],
-        "host_mass": log_mass_masked,
+        "host_mass": obs["log_mass"][mask],
     }

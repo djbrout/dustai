@@ -562,74 +562,60 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     - Produces better-calibrated CIs from Hesse
     """
 
-    # Profile likelihood over nu: scan nu on a grid, fit (fsigma8, sigma_v)
-    # at each nu, pick the nu that maximizes the profile likelihood.
-    # This is principled: the data determines nu without hardcoding.
-    nu_grid = [2.5, 3.0, 4.0, 5.0, 7.0, 10.0, 15.0, 25.0, 50.0, 100.0]
-    best_nll = np.inf
-    best_result = None
+    # Data-driven nu from the kurtosis of the velocity distribution.
+    # The excess kurtosis maps to Student-t DOF via: nu = 4 + 6/kurtosis.
+    # This is principled: the data determines the heavy-tailedness.
+    from scipy.stats import kurtosis as _kurtosis
+    v = np.asarray(velocities)
+    # Use the velocity-to-uncertainty ratio for kurtosis estimation
+    sigma_v_obs = np.sqrt(np.diag(C_obs)) if C_obs.ndim == 2 else np.sqrt(C_obs)
+    standardized_v = v / np.maximum(sigma_v_obs, 1.0)
+    excess_kurt = _kurtosis(standardized_v, fisher=True)
+    if excess_kurt > 0.1:
+        nu_data = np.clip(4.0 + 6.0 / excess_kurt, 2.5, 500.0)
+    else:
+        nu_data = 500.0  # effectively Gaussian
 
-    def _make_cost_fn(nu_val, sigma_u_fixed_val, velocities_, positions_,
-                      C_obs_, cosmo_params_, cov_cache_):
-        """Factory to create cost functions with proper closure."""
-        if sigma_u_fixed_val is not None:
-            def cost(ln_fsigma8, sigma_v):
-                fsigma8 = np.exp(ln_fsigma8)
-                return neg_log_likelihood(
-                    [fsigma8, sigma_v, nu_val], velocities_, positions_,
-                    C_obs_, cosmo_params_, cov_cache=cov_cache_,
-                    sigma_u_fixed=sigma_u_fixed_val
-                )
-        else:
-            def cost(ln_fsigma8, sigma_v, sigma_u):
-                fsigma8 = np.exp(ln_fsigma8)
-                return neg_log_likelihood(
-                    [fsigma8, sigma_v, sigma_u, nu_val], velocities_,
-                    positions_, C_obs_, cosmo_params_, cov_cache=cov_cache_,
-                    sigma_u_fixed=None
-                )
-        return cost
+    # Fit (fsigma8, sigma_v) at the data-driven nu
+    if sigma_u_fixed is not None:
+        def cost(ln_fsigma8, sigma_v):
+            fsigma8 = np.exp(ln_fsigma8)
+            return neg_log_likelihood(
+                [fsigma8, sigma_v, nu_data], velocities, positions, C_obs,
+                cosmo_params, cov_cache=cov_cache,
+                sigma_u_fixed=sigma_u_fixed
+            )
 
-    for nu_try in nu_grid:
-        cost = _make_cost_fn(nu_try, sigma_u_fixed, velocities, positions,
-                             C_obs, cosmo_params, cov_cache)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
+        m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
+        m.limits['sigma_v'] = (1.0, 1000.0)
+    else:
+        def cost(ln_fsigma8, sigma_v, sigma_u):
+            fsigma8 = np.exp(ln_fsigma8)
+            return neg_log_likelihood(
+                [fsigma8, sigma_v, sigma_u, nu_data], velocities, positions,
+                C_obs, cosmo_params, cov_cache=cov_cache,
+                sigma_u_fixed=None
+            )
 
-        if sigma_u_fixed is not None:
-            m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
-            m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
-            m.limits['sigma_v'] = (1.0, 1000.0)
-        else:
-            m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0,
-                       sigma_u=21.0)
-            m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
-            m.limits['sigma_v'] = (1.0, 1000.0)
-            m.limits['sigma_u'] = (1.0, 100.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0)
+        m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
+        m.limits['sigma_v'] = (1.0, 1000.0)
+        m.limits['sigma_u'] = (1.0, 100.0)
 
-        m.errordef = Minuit.LIKELIHOOD
-        m.print_level = 0
-        m.migrad()
+    m.errordef = Minuit.LIKELIHOOD
+    m.print_level = 2 if verbose else 0
+    m.migrad()
+    m.hesse()
 
-        if m.fval < best_nll:
-            best_nll = m.fval
-            m.hesse()
-            best_result = {
-                'ln_fs8': m.values['ln_fsigma8'],
-                'sigma_v': m.values['sigma_v'],
-                'sigma_u': (sigma_u_fixed if sigma_u_fixed is not None
-                            else m.values['sigma_u']),
-                'nu': nu_try,
-                'sigma_ln': m.errors['ln_fsigma8'],
-                'fval': m.fval,
-                'valid': m.valid,
-            }
-
-    ln_fs8_fit = best_result['ln_fs8']
+    ln_fs8_fit = m.values['ln_fsigma8']
     fsigma8_fit = np.exp(ln_fs8_fit)
-    sigma_v_fit = best_result['sigma_v']
-    sigma_u_fit = best_result['sigma_u']
+    sigma_v_fit = m.values['sigma_v']
+    sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
+                   else m.values['sigma_u'])
 
-    # CI from Hesse of the 2-parameter fit at optimal nu
-    sigma_ln = best_result['sigma_ln']
+    # CI from Hesse in log-space — no ad-hoc scaling
+    sigma_ln = m.errors['ln_fsigma8']
     sigma_fsigma8 = fsigma8_fit * sigma_ln
 
     # 68% CI via log-space (asymmetric in linear space)
