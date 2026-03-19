@@ -135,16 +135,16 @@ def _default_power_spectrum_table(cosmo_params):
 
 
 def _nonlinear_correction(k, Ptt, cosmo_params):
-    """Apply 1-loop non-linear correction to P_tt (Eq. 37-38).
+    """Apply non-linear correction to P_tt using Bel+2019 (Eq. 37-38).
 
-    For now we use a Lorentzian damping as a proxy for the full 1-loop
-    calculation.  The agent can replace this with the exact expressions.
-
-    Returns corrected P_tt.
+    Uses the same non-linear velocity divergence correction as
+    simulate.py's velocity_power_spectrum for consistency.
     """
-    sigma_nl = cosmo_params.get('sigma_nl', 6.0)  # Mpc/h
-    damping = 1.0 / (1.0 + (k * sigma_nl) ** 2)
-    return Ptt * damping
+    sigma8 = cosmo_params.get('sigma8', 0.811)
+    a1 = -0.817 + 3.198 * sigma8
+    a2 = 0.877 - 4.191 * sigma8
+    a3 = -1.199 + 4.629 * sigma8
+    return Ptt * np.exp(-k * (a1 + a2 * k + a3 * k ** 2))
 
 
 # ---------------------------------------------------------------------------

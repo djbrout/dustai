@@ -100,7 +100,7 @@ def run_one_mock(seed: int) -> dict:
             velocities=velocities,
             positions=positions,
             C_obs=C_obs,
-            cosmo_params=UCHUU_COSMO,
+            cosmo_params=FIDUCIAL_COSMO,
             sigma_u_fixed=SIGMA_U_FIXED,
         )
 
