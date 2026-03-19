@@ -645,6 +645,10 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
         sigma_prior = fsigma8_prior * sigma_ln_fisher
     except np.linalg.LinAlgError:
         sigma_prior = 0.15 * fsigma8_prior  # fallback
+    # The Fisher width is the Cramér-Rao bound (best-case posterior).
+    # Use 2x Fisher as the prior width so the prior is less informative
+    # than the data (standard for weakly informative priors).
+    sigma_prior *= 2.0
     # Ensure reasonable bounds
     sigma_prior = np.clip(sigma_prior, 0.05 * fsigma8_prior, 0.50 * fsigma8_prior)
 
