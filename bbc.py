@@ -631,40 +631,35 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- Self-calibrating BBC: estimate color-dependent bias from data ---
-    # The P23 bias depends on (color, host_mass) only. Peculiar velocities
-    # are independent of SN properties. So the mean delta_mu in each
-    # (c, mass) bin is the P23 systematic bias (velocity noise averages
-    # out with ~50 SNe per bin, contributing <0.001 mag vs ~0.05 mag bias).
-    #
-    # This is principled: no hardcoded P23 parameters, works for any
-    # scatter model that has a color-dependent bias.
+    # --- Parametric BBC: fit non-linear color dependence ---
+    # The Tripp formula already fits linear c and mass step terms.
+    # The P23 bias has a non-linear component (quadratic+) from the
+    # dust/intrinsic mixture. Fit a quadratic in c (by mass bin) to
+    # the Hubble residuals and subtract. Uses only ~4 parameters,
+    # preserving nearly all velocity signal (vs ~30 for binning).
+    # No hardcoded P23 parameters — data-driven.
 
     c_masked = c[mask]
     log_mass_masked = obs["log_mass"][mask]
-    high_mass_masked = log_mass_masked > 10.0
+    high_mass_masked = (log_mass_masked > 10.0).astype(float)
     delta_mu_masked = tripp["delta_mu"][mask]
     sigma_mu_masked = tripp["sigma_mu"][mask]
     J_z_masked = vel["J_z"][mask]
 
-    # Bin by (color, host_mass) and compute mean delta_mu
-    n_c_bins = 10
-    c_edges = np.linspace(-0.3, 0.3, n_c_bins + 1)
-    ic_data = np.clip(np.digitize(c_masked, c_edges) - 1, 0, n_c_bins - 1)
-
-    mu_correction = np.zeros_like(delta_mu_masked)
-    for im in [False, True]:
-        mass_sel = high_mass_masked == im
-        for ic in range(n_c_bins):
-            bin_sel = mass_sel & (ic_data == ic)
-            n_bin = np.sum(bin_sel)
-            if n_bin > 10:
-                mu_correction[bin_sel] = np.mean(delta_mu_masked[bin_sel])
-
-    # Subtract weighted mean of corrections (matches what M_0 absorbed)
+    # Fit: delta_mu = a0*c^2 + a1*c^2*high_mass + a2*c^3 + a3*c^3*high_mass
+    # (constant, linear c, and mass step already absorbed by Tripp)
+    c2 = c_masked**2
+    c3 = c_masked**3
+    X = np.column_stack([c2, c2 * high_mass_masked, c3, c3 * high_mass_masked])
     w = 1.0 / sigma_mu_masked**2
-    w_mean = np.sum(mu_correction * w) / np.sum(w)
-    mu_correction -= w_mean
+
+    # Weighted least squares: (X^T W X)^{-1} X^T W y
+    Xw = X * w[:, None]
+    try:
+        coeffs = np.linalg.solve(Xw.T @ X, Xw.T @ delta_mu_masked)
+        mu_correction = X @ coeffs
+    except np.linalg.LinAlgError:
+        mu_correction = np.zeros_like(delta_mu_masked)
 
     delta_mu_corr = delta_mu_masked - mu_correction
     v_corr = J_z_masked * delta_mu_corr
