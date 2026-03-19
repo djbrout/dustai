@@ -30,6 +30,35 @@ FSIGMA8_FID = 0.4  # fiducial fsigma8 for pre-computation
 # Power spectrum utilities
 # ---------------------------------------------------------------------------
 
+def _load_uchuu_power_spectrum(cosmo_params):
+    """Load the measured velocity power spectrum from Uchuu.
+
+    Converts P_v(k) (velocity PS in (km/s)^2 (Mpc/h)^3) to
+    P_theta_theta(k) for use in the covariance computation.
+
+    Returns (k_arr, Ptt) in the same format as _default_power_spectrum_table.
+    Returns None if the Uchuu PS file doesn't exist.
+    """
+    from pathlib import Path
+    pvv_path = Path(__file__).parent / 'uchuu' / 'uchuu_pvv.npz'
+    if not pvv_path.exists():
+        return None
+
+    data = np.load(pvv_path)
+    k_uchuu = data['k']
+    Pvv_uchuu = data['Pvv']  # (km/s)^2 (Mpc/h)^3, summed over 3 components
+
+    # P_v(k) = (H0)^2 / k^2 * P_tt(k) for each velocity component
+    # Total P_v = 3 * P_v_component (isotropic)
+    # So P_tt(k) = P_v(k) * k^2 / (3 * H0^2)
+    H0 = 100.0  # km/s per Mpc/h
+    Ptt = Pvv_uchuu * k_uchuu**2 / (3.0 * H0**2)
+
+    # Filter out k=0 and very small k
+    valid = k_uchuu > 1e-4
+    return k_uchuu[valid], Ptt[valid]
+
+
 def _default_power_spectrum_table(cosmo_params):
     """Return a (k, P_theta_theta) table.
 
@@ -205,9 +234,14 @@ def compute_velocity_covariance(positions, fsigma8, sigma_u, cosmo_params):
     N = len(positions)
     H0 = cosmo_params.get('H0', 67.4)  # km/s/Mpc
 
-    # Get power spectrum and apply non-linear correction
-    k_arr, Ptt = _default_power_spectrum_table(cosmo_params)
-    Ptt = _nonlinear_correction(k_arr, Ptt, cosmo_params)
+    # Try Uchuu-measured PS first, fall back to analytical
+    uchuu_ps = _load_uchuu_power_spectrum(cosmo_params)
+    if uchuu_ps is not None:
+        k_arr, Ptt = uchuu_ps
+        # Uchuu PS already includes non-linear effects, no correction needed
+    else:
+        k_arr, Ptt = _default_power_spectrum_table(cosmo_params)
+        Ptt = _nonlinear_correction(k_arr, Ptt, cosmo_params)
 
     # --- Pre-computation trick (see docstring) ---
     # Compute C^vv at the fiducial fsigma8, then rescale:
