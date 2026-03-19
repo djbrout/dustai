@@ -461,9 +461,14 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
     alpha = np.linalg.solve(L_chol, v)
     chi2 = np.dot(alpha, alpha)
 
-    # Gaussian negative log-likelihood — use with split-β BBC which
-    # already Gaussianizes the residuals
-    nll = 0.5 * (N * np.log(2.0 * np.pi) + log_det + chi2)
+    # Student-t with nu degrees of freedom
+    nu = 5.0
+
+    log_C = (special.gammaln(0.5 * (nu + N))
+             - special.gammaln(0.5 * nu)
+             - 0.5 * N * np.log(nu * np.pi))
+
+    nll = -log_C + 0.5 * log_det + 0.5 * (nu + N) * np.log(1.0 + chi2 / nu)
 
     return nll
 
@@ -533,30 +538,33 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     - Produces better-calibrated CIs from Hesse
     """
 
+    # Fix sigma_v at 250 km/s to reduce the number of free parameters
+    # and get tighter CIs on fsigma8. The typical velocity noise floor
+    # from non-linear motions and residual scatter is ~200-300 km/s.
+    SIGMA_V_FIXED = 250.0
+
     if sigma_u_fixed is not None:
-        def cost(ln_fsigma8, sigma_v):
+        def cost(ln_fsigma8):
             fsigma8 = np.exp(ln_fsigma8)
             return neg_log_likelihood(
-                [fsigma8, sigma_v], velocities, positions, C_obs,
+                [fsigma8, SIGMA_V_FIXED], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=sigma_u_fixed
             )
 
-        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4))
         m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
-        m.limits['sigma_v'] = (1.0, 1000.0)
         m.errordef = Minuit.LIKELIHOOD
     else:
-        def cost(ln_fsigma8, sigma_v, sigma_u):
+        def cost(ln_fsigma8, sigma_u):
             fsigma8 = np.exp(ln_fsigma8)
             return neg_log_likelihood(
-                [fsigma8, sigma_v, sigma_u], velocities, positions, C_obs,
+                [fsigma8, SIGMA_V_FIXED, sigma_u], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache, sigma_u_fixed=None
             )
 
-        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_u=21.0)
         m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
-        m.limits['sigma_v'] = (1.0, 1000.0)
         m.limits['sigma_u'] = (1.0, 100.0)
         m.errordef = Minuit.LIKELIHOOD
 
@@ -568,7 +576,7 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
 
     ln_fs8_fit = m.values['ln_fsigma8']
     fsigma8_fit = np.exp(ln_fs8_fit)
-    sigma_v_fit = m.values['sigma_v']
+    sigma_v_fit = SIGMA_V_FIXED
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 

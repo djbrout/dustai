@@ -631,77 +631,13 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- Re-do Tripp fit with split-β to handle P23 dust mixture ---
-    # The standard Tripp uses a single β for all SNe, but P23 has:
-    #   - Blue (c<0): mostly intrinsic, effective β ~ 2.07
-    #   - Red (c>0): mixture of intrinsic + dust, effective β > 2.07
-    # A split-β Tripp fit better captures this and produces less
-    # biased, less noisy Hubble residuals.
-    from scipy.optimize import minimize as sp_minimize
-
-    m_b = obs["m_b"][mask]
-    x1_m = x1[mask]
-    c_m = c[mask]
-    z_obs_m = obs["z_obs"][mask]
-    log_mass_m = obs["log_mass"][mask]
-    sigma_mB_m = obs["sigma_mB"][mask]
-    sigma_x1_m = obs["sigma_x1"][mask]
-    sigma_c_m = obs["sigma_c"][mask]
-
-    # Import distance modulus and velocity conversion from simulate
-    from simulate import mu_cos as mu_cos_func, Hz_cos, r_cos, C_LIGHT
-
-    mu_cos_obs = mu_cos_func(z_obs_m)
-
-    def mass_step(log_mass, gamma):
-        return np.where(log_mass > 10.0, -gamma / 2.0, gamma / 2.0)
-
-    # Split-β Tripp: separate β for blue (c<0) and red (c>=0)
-    def neg_ll(params):
-        alpha, beta_blue, beta_red, M_0, gamma, ln_sig = params
-        sigma_int = np.exp(ln_sig)
-        dM = mass_step(log_mass_m, gamma)
-        # Split-β: use beta_blue for c<0, beta_red for c>=0
-        beta_eff = np.where(c_m < 0, beta_blue, beta_red)
-        mu_model = m_b - (M_0 - alpha * x1_m + beta_eff * c_m + dM)
-        resid = mu_model - mu_cos_obs
-        var = (sigma_mB_m**2 + alpha**2 * sigma_x1_m**2
-               + beta_eff**2 * sigma_c_m**2 + sigma_int**2)
-        return np.sum(resid**2 / var + np.log(var))
-
-    x0 = [0.15, 2.1, 3.5, -19.36, 0.05, np.log(0.10)]
-    res = sp_minimize(neg_ll, x0, method='Nelder-Mead',
-                       options={'maxiter': 50000, 'xatol': 1e-8, 'fatol': 1e-8})
-    alpha_f, beta_blue_f, beta_red_f, M0_f, gamma_f, ln_sig_f = res.x
-    sigma_int_f = np.exp(ln_sig_f)
-
-    dM_f = mass_step(log_mass_m, gamma_f)
-    beta_eff_f = np.where(c_m < 0, beta_blue_f, beta_red_f)
-    mu_obs_new = m_b - (M0_f - alpha_f * x1_m + beta_eff_f * c_m + dM_f)
-    delta_mu_new = mu_obs_new - mu_cos_obs
-
-    sigma_mu_new = np.sqrt(sigma_mB_m**2
-                           + alpha_f**2 * sigma_x1_m**2
-                           + beta_eff_f**2 * sigma_c_m**2
-                           + sigma_int_f**2)
-
-    # Convert to velocities (same as simulate.estimate_velocities)
-    Hz = Hz_cos(z_obs_m)
-    rz = np.maximum(r_cos(z_obs_m), 1e-3)
-    bracket = (1.0 + z_obs_m) * C_LIGHT / (Hz * rz) - 1.0
-    bracket = np.where(np.abs(bracket) < 1e-6, np.sign(bracket) * 1e-6, bracket)
-    J_z = -C_LIGHT * np.log(10.0) / 5.0 / bracket
-
-    v_new = J_z * delta_mu_new
-    sigma_v_new = np.abs(J_z) * sigma_mu_new
-
     return {
-        "velocities": v_new,
-        "sigma_v": sigma_v_new,
+        "velocities": vel["v_est"][mask],
+        "sigma_v": vel["sigma_v"][mask],
         "n_sn": int(np.sum(mask)),
-        "delta_mu": delta_mu_new,
-        "colors": c_m,
-        "x1": x1_m,
-        "z": z_obs_m,
-        "host_mass": log_mass_m,
+        "delta_mu": tripp["delta_mu"][mask],
+        "colors": c[mask],
+        "x1": x1[mask],
+        "z": obs["z_obs"][mask],
+        "host_mass": obs["log_mass"][mask],
     }
