@@ -706,28 +706,10 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 
-    # CI from the DATA likelihood Hesse (without prior).
-    # The prior helps the point estimate but shouldn't inflate the CI.
-    # Compute numerical Hesse of the data-only NLL at the MAP point.
-    def _data_nll(ln_fs8):
-        fs8 = np.exp(ln_fs8)
-        return neg_log_likelihood(
-            [fs8, sigma_v_fit, nu_data], velocities, positions, C_obs,
-            cosmo_params, cov_cache=cov_cache,
-            sigma_u_fixed=sigma_u_fixed
-        )
-
-    eps = 0.02
-    f0 = _data_nll(ln_fs8_fit)
-    fp = _data_nll(ln_fs8_fit + eps)
-    fm = _data_nll(ln_fs8_fit - eps)
-    d2f = (fp - 2*f0 + fm) / eps**2
-    sigma_ln_data = 1.0 / np.sqrt(max(d2f, 1e-10))
-
-    # Use the data-only Hesse, but fall back to posterior Hesse if
-    # the data Hesse is poorly conditioned (flat likelihood)
-    sigma_ln_posterior = m.errors['ln_fsigma8']
-    sigma_ln = min(sigma_ln_data, sigma_ln_posterior)
+    # CI from the posterior Hesse (data + prior combined).
+    # The prior tightens the CIs appropriately: it adds Fisher information
+    # from the cosmological constraint, which is principled.
+    sigma_ln = m.errors['ln_fsigma8']
     sigma_fsigma8 = fsigma8_fit * sigma_ln
 
     # 68% CI via log-space (asymmetric in linear space)
