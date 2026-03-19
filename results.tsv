@@ -5,4 +5,6 @@ dbd41ad	1.561142	0.025165	0.7500	improved	Student-t nu=5 + log(fsigma8) paramete
 d19b2fd	1.010705	0.025165	0.7500	improved	Hybrid: Student-t MLE + Gaussian Hesse CIs
 e9441f4	1.006263	0.025165	0.7500	improved	CI_SCALE=0.977 for optimal coverage threshold
 4ba9495	0.874400	-0.000464	0.7500	reverted	BC=0.975 + CI_SCALE=0.984 (hardcoded, not generalizable)
-39859e3	2.726427	0.029895	0.7500	principled	Data-driven nu from kurtosis, no hardcoded params
+39859e3	2.726427	0.029895	0.7500	principled	Data-driven nu from kurtosis, no hardcoded params (analytical mocks)
+0b66f9d	1.878559	0.028486	0.7500	principled	+ Bel+2019 NL correction + param fixes (analytical mocks)
+77e45ca	3.584327	-0.141137	0.6875	uchuu	Uchuu N-body mocks, 16 mocks, principled Student-t
