@@ -569,28 +569,36 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     best_nll = np.inf
     best_result = None
 
-    for nu_try in nu_grid:
-        if sigma_u_fixed is not None:
-            def cost(ln_fsigma8, sigma_v, _nu=nu_try):
+    def _make_cost_fn(nu_val, sigma_u_fixed_val, velocities_, positions_,
+                      C_obs_, cosmo_params_, cov_cache_):
+        """Factory to create cost functions with proper closure."""
+        if sigma_u_fixed_val is not None:
+            def cost(ln_fsigma8, sigma_v):
                 fsigma8 = np.exp(ln_fsigma8)
                 return neg_log_likelihood(
-                    [fsigma8, sigma_v, _nu], velocities, positions, C_obs,
-                    cosmo_params, cov_cache=cov_cache,
-                    sigma_u_fixed=sigma_u_fixed
+                    [fsigma8, sigma_v, nu_val], velocities_, positions_,
+                    C_obs_, cosmo_params_, cov_cache=cov_cache_,
+                    sigma_u_fixed=sigma_u_fixed_val
                 )
+        else:
+            def cost(ln_fsigma8, sigma_v, sigma_u):
+                fsigma8 = np.exp(ln_fsigma8)
+                return neg_log_likelihood(
+                    [fsigma8, sigma_v, sigma_u, nu_val], velocities_,
+                    positions_, C_obs_, cosmo_params_, cov_cache=cov_cache_,
+                    sigma_u_fixed=None
+                )
+        return cost
 
+    for nu_try in nu_grid:
+        cost = _make_cost_fn(nu_try, sigma_u_fixed, velocities, positions,
+                             C_obs, cosmo_params, cov_cache)
+
+        if sigma_u_fixed is not None:
             m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
             m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
             m.limits['sigma_v'] = (1.0, 1000.0)
         else:
-            def cost(ln_fsigma8, sigma_v, sigma_u, _nu=nu_try):
-                fsigma8 = np.exp(ln_fsigma8)
-                return neg_log_likelihood(
-                    [fsigma8, sigma_v, sigma_u, _nu], velocities, positions,
-                    C_obs, cosmo_params, cov_cache=cov_cache,
-                    sigma_u_fixed=None
-                )
-
             m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0,
                        sigma_u=21.0)
             m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
