@@ -27,8 +27,8 @@ from likelihood import fit_fsigma8
 # Configuration
 # ---------------------------------------------------------------------------
 
-N_SN = 1500
-N_MOCKS = 16          # more mocks for better statistics
+N_SN = 6600            # match Carreres+2025 paper
+N_MOCKS = 8            # match paper (8 mocks)
 SCATTER_MODEL = "P23"
 FSIGMA8_FID = FIDUCIAL_COSMO["fsigma8"]
 SIGMA_U_FIXED = 21.0
