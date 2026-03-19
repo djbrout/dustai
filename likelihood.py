@@ -570,7 +570,9 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
 
     # Minimise
     m.migrad()
-    m.hesse()
+
+    # Use MINOS for accurate profile likelihood CIs (not parabolic Hesse)
+    m.minos('ln_fsigma8')
 
     ln_fs8_fit = m.values['ln_fsigma8']
     fsigma8_fit = np.exp(ln_fs8_fit)
@@ -578,13 +580,14 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 
-    # Transform uncertainty from log-space to linear space
-    # delta(fsigma8) = fsigma8 * delta(ln_fsigma8)
-    sigma_ln = m.errors['ln_fsigma8']
-    sigma_fsigma8 = fsigma8_fit * sigma_ln
+    # MINOS gives asymmetric errors in log-space
+    merr = m.merrors['ln_fsigma8']
+    ln_lo = ln_fs8_fit + merr.lower  # merr.lower is negative
+    ln_hi = ln_fs8_fit + merr.upper
 
-    # 68% CI via log-space (asymmetric in linear space)
-    ci_68 = (np.exp(ln_fs8_fit - sigma_ln), np.exp(ln_fs8_fit + sigma_ln))
+    # Transform to linear space
+    ci_68 = (np.exp(ln_lo), np.exp(ln_hi))
+    sigma_fsigma8 = 0.5 * (ci_68[1] - ci_68[0])
 
     return {
         'fsigma8': fsigma8_fit,
