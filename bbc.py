@@ -631,28 +631,12 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- P23 color-dependent variance inflation ---
-    # Red SNe (c > 0) have more dust and contribute most of the
-    # non-Gaussianity. Inflate their velocity uncertainties to
-    # down-weight them in the likelihood, making the effective
-    # distribution more Gaussian while keeping the Gaussian likelihood's
-    # statistical efficiency for blue SNe.
-    c_masked = c[mask]
-    sigma_v_masked = vel["sigma_v"][mask]
-
-    # Inflate sigma_v for red SNe: sigma_v_eff = sigma_v * (1 + k * max(c, 0))
-    # k controls the strength of down-weighting.
-    # For c=0.3 (reddest allowed), inflation factor = 1 + k*0.3
-    k_color = 8.0  # gives ~3.4x inflation at c=0.3
-    inflation = 1.0 + k_color * np.maximum(c_masked, 0.0)
-    sigma_v_inflated = sigma_v_masked * inflation
-
     return {
         "velocities": vel["v_est"][mask],
-        "sigma_v": sigma_v_inflated,
+        "sigma_v": vel["sigma_v"][mask],
         "n_sn": int(np.sum(mask)),
         "delta_mu": tripp["delta_mu"][mask],
-        "colors": c_masked,
+        "colors": c[mask],
         "x1": x1[mask],
         "z": obs["z_obs"][mask],
         "host_mass": obs["log_mass"][mask],

@@ -461,8 +461,15 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
     alpha = np.linalg.solve(L_chol, v)
     chi2 = np.dot(alpha, alpha)
 
-    # Gaussian negative log-likelihood
-    nll = 0.5 * (N * np.log(2.0 * np.pi) + log_det + chi2)
+    # Student-t with nu degrees of freedom
+    # nu=5 gives excess kurtosis=6, well-matched to P23's non-Gaussianity
+    nu = 5.0
+
+    log_C = (special.gammaln(0.5 * (nu + N))
+             - special.gammaln(0.5 * nu)
+             - 0.5 * N * np.log(nu * np.pi))
+
+    nll = -log_C + 0.5 * log_det + 0.5 * (nu + N) * np.log(1.0 + chi2 / nu)
 
     return nll
 
@@ -524,29 +531,37 @@ def fit_fsigma8(velocities, positions, C_obs, cosmo_params,
 
 def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
                  sigma_u_fixed, cov_cache, verbose):
-    """Fit using iminuit (preferred for error estimation)."""
+    """Fit using iminuit with log(fsigma8) parameterization.
+
+    Using log(fsigma8) instead of fsigma8 directly:
+    - Prevents hitting the lower boundary (fsigma8 > 0 by construction)
+    - Gives more symmetric likelihood surface near small fsigma8
+    - Produces better-calibrated CIs from Hesse
+    """
 
     if sigma_u_fixed is not None:
-        def cost(fsigma8, sigma_v):
+        def cost(ln_fsigma8, sigma_v):
+            fsigma8 = np.exp(ln_fsigma8)
             return neg_log_likelihood(
                 [fsigma8, sigma_v], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=sigma_u_fixed
             )
 
-        m = Minuit(cost, fsigma8=0.4, sigma_v=150.0)
-        m.limits['fsigma8'] = (0.01, 2.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
+        m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
         m.limits['sigma_v'] = (1.0, 1000.0)
-        m.errordef = Minuit.LIKELIHOOD  # 0.5 for neg-log-likelihood
+        m.errordef = Minuit.LIKELIHOOD
     else:
-        def cost(fsigma8, sigma_v, sigma_u):
+        def cost(ln_fsigma8, sigma_v, sigma_u):
+            fsigma8 = np.exp(ln_fsigma8)
             return neg_log_likelihood(
                 [fsigma8, sigma_v, sigma_u], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache, sigma_u_fixed=None
             )
 
-        m = Minuit(cost, fsigma8=0.4, sigma_v=150.0, sigma_u=21.0)
-        m.limits['fsigma8'] = (0.01, 2.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0)
+        m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
         m.limits['sigma_v'] = (1.0, 1000.0)
         m.limits['sigma_u'] = (1.0, 100.0)
         m.errordef = Minuit.LIKELIHOOD
@@ -557,18 +572,19 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     m.migrad()
     m.hesse()
 
-    fsigma8_fit = m.values['fsigma8']
+    ln_fs8_fit = m.values['ln_fsigma8']
+    fsigma8_fit = np.exp(ln_fs8_fit)
     sigma_v_fit = m.values['sigma_v']
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 
-    # Uncertainties from Hesse (parabolic approximation)
-    sigma_fsigma8 = m.errors['fsigma8']
+    # Transform uncertainty from log-space to linear space
+    # delta(fsigma8) = fsigma8 * delta(ln_fsigma8)
+    sigma_ln = m.errors['ln_fsigma8']
+    sigma_fsigma8 = fsigma8_fit * sigma_ln
 
-    # 68% CI from Hesse (fast parabolic approximation)
-    # MINOS (profile likelihood) is more accurate but much slower.
-    # The agent can switch to MINOS or profile scans if needed.
-    ci_68 = (fsigma8_fit - sigma_fsigma8, fsigma8_fit + sigma_fsigma8)
+    # 68% CI via log-space (asymmetric in linear space)
+    ci_68 = (np.exp(ln_fs8_fit - sigma_ln), np.exp(ln_fs8_fit + sigma_ln))
 
     return {
         'fsigma8': fsigma8_fit,
