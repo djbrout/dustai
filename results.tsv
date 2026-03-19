@@ -8,3 +8,5 @@ e9441f4	1.006263	0.025165	0.7500	improved	CI_SCALE=0.977 for optimal coverage th
 39859e3	2.726427	0.029895	0.7500	principled	Data-driven nu from kurtosis, no hardcoded params (analytical mocks)
 0b66f9d	1.878559	0.028486	0.7500	principled	+ Bel+2019 NL correction + param fixes (analytical mocks)
 77e45ca	3.584327	-0.141137	0.6875	uchuu	Uchuu N-body mocks, 16 mocks, principled Student-t
+f20074b	0.993691	-0.007148	0.9375	uchuu-best	Cosmo prior + multi-start, 16 Uchuu mocks
+f20074b	1.208228	0.020881	1.0000	analytical	Same approach on analytical mocks
