@@ -631,70 +631,29 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- Analytical P23 bias correction ---
-    # The Tripp formula uses a single β for the color term, but P23 has:
-    #   - Intrinsic: β_int * c_int (β_int ~ 2.07)
-    #   - Dust: (R_V + 1) * E_dust (R_V ~ 1.66 or 3.25 depending on mass)
-    # The Tripp β_fit is a compromise. The residual bias per SN is:
-    #   bias = (β_int - β_fit) * c_int + (R_V+1 - β_fit) * E_dust
-    #
-    # We estimate E[E_dust | c, mass] analytically from the P23 priors
-    # using the Gaussian(c_int) * Exponential(E_dust) posterior.
-
+    # --- P23 color-dependent variance inflation ---
+    # Red SNe (c > 0) have more dust and contribute most of the
+    # non-Gaussianity. Inflate their velocity uncertainties to
+    # down-weight them in the likelihood, making the effective
+    # distribution more Gaussian while keeping the Gaussian likelihood's
+    # statistical efficiency for blue SNe.
     c_masked = c[mask]
-    log_mass_masked = obs["log_mass"][mask]
-    delta_mu_masked = tripp["delta_mu"][mask]
-    J_z_masked = vel["J_z"][mask]
-    beta_fit = tripp["beta"]
+    sigma_v_masked = vel["sigma_v"][mask]
 
-    # P23 parameters
-    mu_c_int = -0.07
-    sigma_c_int = 0.05
-    beta_int_mean = 2.07
-
-    # tau depends on host mass (using z<0.1 values since our range is 0.02-0.1)
-    high_mass = log_mass_masked > 10.0
-    tau = np.where(high_mass, 0.11, 0.14)
-    # Mean R_V + 1 by host mass
-    rv_plus1 = np.where(high_mass, 1.66 + 1.0, 3.25 + 1.0)
-
-    # E[E_dust | c, mass]: posterior of Gaussian(c_int) * Exp(E_dust)
-    # Truncated Gaussian posterior with:
-    #   mean_post = c - mu_c_int - sigma_c_int^2 / tau
-    #   std_post = sigma_c_int, truncated at E >= 0
-    from scipy.stats import norm
-    mean_post = c_masked - mu_c_int - sigma_c_int**2 / tau
-    std_post = sigma_c_int
-    alpha = -mean_post / std_post
-    ratio = norm.pdf(alpha) / np.maximum(norm.sf(alpha), 1e-10)
-    E_dust = np.maximum(mean_post + std_post * ratio, 0.0)
-    E_c_int = c_masked - E_dust
-
-    # Full expected color term from P23 model:
-    #   g(c) = beta_int * c_int + (R_V+1) * E_dust
-    g_c = beta_int_mean * E_c_int + rv_plus1 * E_dust
-
-    # The Tripp fit already models the color term as beta_fit * c + M0_offset.
-    # Subtract the linear part (already absorbed by the Tripp fit) to get
-    # only the non-linear residual bias.
-    # Fit: g(c) ≈ a*c + b  →  residual = g(c) - a*c - b
-    c_mean = np.mean(c_masked)
-    g_mean = np.mean(g_c)
-    a_fit = np.sum((c_masked - c_mean) * (g_c - g_mean)) / np.sum((c_masked - c_mean)**2)
-    b_fit = g_mean - a_fit * c_mean
-    mu_bias_nonlinear = g_c - a_fit * c_masked - b_fit
-
-    # Corrected Hubble residuals and velocities
-    delta_mu_corr = delta_mu_masked - mu_bias_nonlinear
-    v_corr = J_z_masked * delta_mu_corr
+    # Inflate sigma_v for red SNe: sigma_v_eff = sigma_v * (1 + k * max(c, 0))
+    # k controls the strength of down-weighting.
+    # For c=0.3 (reddest allowed), inflation factor = 1 + k*0.3
+    k_color = 8.0  # gives ~3.4x inflation at c=0.3
+    inflation = 1.0 + k_color * np.maximum(c_masked, 0.0)
+    sigma_v_inflated = sigma_v_masked * inflation
 
     return {
-        "velocities": v_corr,
-        "sigma_v": vel["sigma_v"][mask],
+        "velocities": vel["v_est"][mask],
+        "sigma_v": sigma_v_inflated,
         "n_sn": int(np.sum(mask)),
-        "delta_mu": delta_mu_corr,
+        "delta_mu": tripp["delta_mu"][mask],
         "colors": c_masked,
         "x1": x1[mask],
         "z": obs["z_obs"][mask],
-        "host_mass": log_mass_masked,
+        "host_mass": obs["log_mass"][mask],
     }

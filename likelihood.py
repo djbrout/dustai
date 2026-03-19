@@ -461,18 +461,8 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
     alpha = np.linalg.solve(L_chol, v)
     chi2 = np.dot(alpha, alpha)
 
-    # Student-t with nu degrees of freedom
-    # For Student-t: excess_kurtosis = 6/(nu-4) for nu>4
-    # P23 kurtosis ~7.6 before BBC. nu=5 gives kurtosis=6, a good match.
-    nu = 5.0
-
-    # -log p(v) = -log C(nu,N) + 0.5*log|Sigma| + (nu+N)/2 * log(1 + chi2/nu)
-    # log C(nu,N) = log Gamma((nu+N)/2) - log Gamma(nu/2) - N/2 * log(nu*pi)
-    log_C = (special.gammaln(0.5 * (nu + N))
-             - special.gammaln(0.5 * nu)
-             - 0.5 * N * np.log(nu * np.pi))
-
-    nll = -log_C + 0.5 * log_det + 0.5 * (nu + N) * np.log(1.0 + chi2 / nu)
+    # Gaussian negative log-likelihood
+    nll = 0.5 * (N * np.log(2.0 * np.pi) + log_det + chi2)
 
     return nll
 
