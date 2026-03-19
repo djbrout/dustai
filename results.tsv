@@ -4,4 +4,5 @@ afd06e4	5.311284	-0.597682	0.7500	baseline	Gaussian likelihood, no BBC correctio
 dbd41ad	1.561142	0.025165	0.7500	improved	Student-t nu=5 + log(fsigma8) parameterization
 d19b2fd	1.010705	0.025165	0.7500	improved	Hybrid: Student-t MLE + Gaussian Hesse CIs
 e9441f4	1.006263	0.025165	0.7500	improved	CI_SCALE=0.977 for optimal coverage threshold
-4ba9495	0.874400	-0.000464	0.7500	best	BC=0.975 + CI_SCALE=0.984: near-zero bias, tight CIs
+4ba9495	0.874400	-0.000464	0.7500	reverted	BC=0.975 + CI_SCALE=0.984 (hardcoded, not generalizable)
+39859e3	2.726427	0.029895	0.7500	principled	Data-driven nu from kurtosis, no hardcoded params
