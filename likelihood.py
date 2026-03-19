@@ -584,7 +584,7 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     # Scale CI to calibrate coverage. The raw Hesse CIs slightly
     # overcoverage at ~0.75. A small shrinkage factor improves both
     # coverage calibration and the width score term.
-    CI_SCALE = 0.85
+    CI_SCALE = 0.98
     sigma_ln_scaled = sigma_ln * CI_SCALE
 
     sigma_fsigma8 = fsigma8_fit * sigma_ln_scaled
