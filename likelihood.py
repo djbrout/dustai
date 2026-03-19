@@ -471,6 +471,12 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
 
     nll = -log_C + 0.5 * log_det + 0.5 * (nu + N) * np.log(1.0 + chi2 / nu)
 
+    # Weak Gaussian prior on fsigma8 centered near fiducial,
+    # standard in cosmological analyses for regularization
+    PRIOR_MEAN = 0.40
+    PRIOR_SIGMA = 0.30
+    nll += 0.5 * ((fsigma8 - PRIOR_MEAN) / PRIOR_SIGMA) ** 2
+
     return nll
 
 
