@@ -631,15 +631,9 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # Small velocity calibration to correct for the mean P23 bias.
-    # The P23 non-Gaussianity causes a ~2.5% positive bias in the
-    # Student-t fsigma8 estimate. Since fsigma8 ∝ |v|, scaling
-    # velocities by 0.977 corrects this.
-    V_SCALE = 0.977
-
     return {
-        "velocities": vel["v_est"][mask] * V_SCALE,
-        "sigma_v": vel["sigma_v"][mask] * V_SCALE,
+        "velocities": vel["v_est"][mask],
+        "sigma_v": vel["sigma_v"][mask],
         "n_sn": int(np.sum(mask)),
         "delta_mu": tripp["delta_mu"][mask],
         "colors": c[mask],
