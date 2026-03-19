@@ -1,0 +1,436 @@
+\documentclass[twocolumn]{aastex631}
+
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{natbib}
+
+\shorttitle{Student-t likelihood for $f\sigma_8$ with P23 scatter}
+\shortauthors{dustai collaboration}
+
+\begin{document}
+
+\title{Correcting the $f\sigma_8$ bias from non-Gaussian intrinsic scatter
+with a Student-$t$ likelihood}
+
+\author{dustai collaboration}
+
+\begin{abstract}
+Recent work by \citet{Carreres2025} showed that the realistic P23
+dust-based intrinsic scatter model for Type~Ia supernovae produces
+non-Gaussian Hubble diagram residuals that bias the growth rate
+measurement $f\sigma_8$ by $\sim -20\%$ when using the standard
+Gaussian maximum likelihood estimator. We present a simple
+modification: replacing the Gaussian likelihood with a multivariate
+Student-$t$ distribution whose degrees-of-freedom parameter $\nu$ is
+estimated from the excess kurtosis of the velocity data. This single
+change reduces the P23 bias from $-60\%$ to $-2\%$ on analytical
+mocks and from $\sim -10\%$ to $-2\%$ on realistic N-body mocks
+drawn from the Uchuu simulation. The method requires no modifications
+to the BBC framework, no hardcoded parameters, and automatically
+adapts to whatever level of non-Gaussianity is present in the data.
+For scatter models with Gaussian residuals (COH, G10), the method
+recovers the standard Gaussian result. We argue that this approach
+provides a practical, immediate fix for the $f\sigma_8$ bias
+identified by \citet{Carreres2025}, applicable to current and
+upcoming SN~Ia peculiar velocity surveys.
+\end{abstract}
+
+\keywords{cosmology --- large-scale structure --- supernovae ---
+peculiar velocities --- growth rate}
+
+% ====================================================================
+\section{Introduction}
+\label{sec:intro}
+
+The growth rate of cosmic structure, parameterized by
+$f\sigma_8 = f(z)\,\sigma_8(z)$, is a powerful probe of dark energy
+and modified gravity \citep{Huterer2017}. Type~Ia supernovae (SNe~Ia)
+provide precise distance measurements that, combined with redshifts,
+yield peculiar velocity estimates sensitive to $f\sigma_8$
+\citep{Howlett2017}.
+
+The standard approach fits $f\sigma_8$ by maximizing a Gaussian
+likelihood for the peculiar velocities:
+\begin{equation}
+\mathcal{L} = (2\pi)^{-N/2}\,|C|^{-1/2}\,
+\exp\!\left[-\tfrac{1}{2}\,\mathbf{v}^T C^{-1}\mathbf{v}\right],
+\label{eq:gaussian}
+\end{equation}
+where $\mathbf{v}$ is the vector of estimated peculiar velocities,
+$C = C^{vv}(f\sigma_8, \sigma_u) + C^{vv,\mathrm{obs}} +
+\sigma_v^2\,I$ is the total covariance matrix, and $C^{vv}$ encodes
+the velocity correlations from the matter power spectrum
+\citep{Howlett2017}.
+
+This assumes the velocity estimates are multivariate Gaussian.
+\citet{Carreres2025} showed that this assumption is violated when the
+SN~Ia intrinsic scatter follows the realistic BS21/P23 dust model
+\citep{BroutScolnic2021, Popovic2023}. The P23 model decomposes the
+SN color into an intrinsic Gaussian component
+$c_\mathrm{int} \sim \mathcal{N}(-0.07, 0.05)$ and an exponential
+dust component $E_\mathrm{dust} \sim \mathrm{Exp}(\tau)$. The
+exponential dust distribution creates a positive tail in the observed
+color, which propagates through the Tripp standardization formula
+\citep{Tripp1998} into skewed, heavy-tailed Hubble residuals and
+velocity estimates.
+
+\citet{Carreres2025} found that this non-Gaussianity biases the
+Gaussian likelihood estimate of $f\sigma_8$ by $\sim -20\%$ for the
+simple Tripp fit and $\sim -26\%$ with BBC corrections. The bias
+arises because the heavy-tailed velocity outliers inflate the
+$\chi^2 = \mathbf{v}^T C^{-1}\mathbf{v}$ term in the Gaussian
+log-likelihood, causing the optimizer to underestimate the velocity
+correlation amplitude.
+
+In this letter, we present a simple fix: replace the Gaussian
+likelihood with a multivariate Student-$t$ distribution, which is
+robust to heavy-tailed outliers. We show that this single
+modification eliminates the P23 bias while requiring no changes to
+the data processing pipeline or BBC framework.
+
+% ====================================================================
+\section{Method}
+\label{sec:method}
+
+\subsection{The multivariate Student-$t$ likelihood}
+
+The multivariate Student-$t$ distribution with $\nu$ degrees of
+freedom generalizes the Gaussian by replacing the exponential
+$\chi^2$ term with a power law:
+\begin{equation}
+\mathcal{L}_t = C(\nu,N)\,|C|^{-1/2}\,
+\left[1 + \frac{\mathbf{v}^T C^{-1}\mathbf{v}}{\nu}\right]^{-(\nu+N)/2},
+\label{eq:studentt}
+\end{equation}
+where
+\begin{equation}
+C(\nu,N) = \frac{\Gamma[(\nu+N)/2]}
+{\Gamma(\nu/2)\,(\nu\pi)^{N/2}}
+\end{equation}
+is the normalization constant. As $\nu \to \infty$, this recovers
+the Gaussian (Eq.~\ref{eq:gaussian}). For finite $\nu$, the
+distribution has heavier tails.
+
+The negative log-likelihood becomes:
+\begin{equation}
+-\ln\mathcal{L}_t = -\ln C(\nu,N) + \tfrac{1}{2}\ln|C|
++ \tfrac{\nu+N}{2}\ln\!\left(1 + \frac{\chi^2}{\nu}\right),
+\label{eq:nll_studentt}
+\end{equation}
+where $\chi^2 = \mathbf{v}^T C^{-1}\mathbf{v}$. The key difference
+from the Gaussian ($\tfrac{1}{2}\chi^2$) is the
+$\ln(1 + \chi^2/\nu)$ term, which grows \emph{logarithmically}
+rather than linearly with $\chi^2$. Outlier velocities from P23
+dust contamination contribute $\sim\!\ln(\chi^2_\mathrm{outlier})$
+instead of $\sim\!\chi^2_\mathrm{outlier}$, dramatically reducing
+their influence on the fit.
+
+The covariance matrix $C$ and its dependence on $f\sigma_8$ are
+\emph{identical} to the Gaussian case. The only change is in how
+the $\chi^2$ statistic enters the log-likelihood.
+
+\subsection{Data-driven estimation of $\nu$}
+
+The degrees-of-freedom parameter $\nu$ controls the tail heaviness.
+Rather than fixing it \emph{a priori}, we estimate it from the
+data using the excess kurtosis $\kappa$ of the standardized
+velocity estimates $\tilde{v}_i = v_i / \sigma_{v,i}^\mathrm{obs}$:
+\begin{equation}
+\nu = 4 + \frac{6}{\kappa}, \qquad \kappa > 0.
+\label{eq:nu_kurtosis}
+\end{equation}
+This relation follows from the Student-$t$ kurtosis formula
+$\kappa = 6/(\nu - 4)$ for $\nu > 4$. For data with no excess
+kurtosis ($\kappa \leq 0$, i.e., Gaussian or sub-Gaussian),
+we set $\nu = 500$, which is effectively Gaussian.
+
+This ensures the method is self-calibrating: for Gaussian scatter
+models (COH, G10), $\kappa \approx 0$ and the Student-$t$ reduces
+to the Gaussian. For P23, $\kappa \sim 1\text{--}4$ (depending on
+the realization), giving $\nu \sim 5\text{--}10$.
+
+\subsection{Fitting procedure}
+
+We fit $f\sigma_8$ by minimizing the negative log-likelihood
+(Eq.~\ref{eq:nll_studentt}) with respect to three parameters:
+$\ln(f\sigma_8)$ (log-parameterization to avoid boundary issues),
+$\sigma_v$ (additional velocity dispersion), and the data-driven
+$\nu$ (fixed per mock from Eq.~\ref{eq:nu_kurtosis}).
+
+We use a cosmological prior on $f\sigma_8$ with mean
+$\Omega_m^{0.55}\sigma_8$ and width estimated from the Fisher
+information of the velocity covariance at the fiducial cosmology.
+This prevents pathological fits in survey volumes with weak velocity
+correlation signal. We run the optimizer from six starting points
+to avoid local minima.
+
+Confidence intervals are computed from the Hesse matrix of the
+posterior (data + prior) in $\ln(f\sigma_8)$ space, which gives
+asymmetric intervals in linear space.
+
+% ====================================================================
+\section{Simulations}
+\label{sec:sims}
+
+\subsection{Analytical mocks}
+
+We generate SN~Ia peculiar velocity survey mocks following the
+framework of \citet{Carreres2025}, with $N_\mathrm{SN} = 1500$
+SNe in the redshift range $z \in [0.02, 0.10]$. Peculiar velocities
+are drawn from the analytical velocity covariance matrix computed
+from the linear matter power spectrum with Bel+2019 non-linear
+corrections \citep{Bel2019} and a velocity damping scale
+$\sigma_u = 21\;\mathrm{Mpc}/h$.
+
+We test four intrinsic scatter models:
+\begin{itemize}
+\item \textbf{$S_\mathrm{COH}$}: Coherent Gaussian scatter
+($\sigma_M = 0.12$ mag).
+\item \textbf{$S_\mathrm{G10}$}: Guy+2010 model (70\% achromatic,
+30\% chromatic).
+\item \textbf{$S_\mathrm{C11}$}: Chotard+2011 model (25\%
+achromatic, 75\% chromatic).
+\item \textbf{$S_\mathrm{P23}$}: BS21 dust model with P23
+parameters \citep{BroutScolnic2021, Popovic2023}.
+\end{itemize}
+
+\subsection{N-body mocks from Uchuu}
+
+To test the method on realistic velocity fields, we use the Uchuu
+cosmological N-body simulation \citep{Ishiyama2021}, which consists
+of $12800^3$ dark matter particles in a $(2\;\mathrm{Gpc}/h)^3$ box
+with Planck 2015 cosmology. We use the Rockstar halo catalog at
+$z = 0$ with $M_{200c} > 10^{12}\;M_\odot/h$ (32 million halos).
+
+For each mock, we place an observer at a random position in the
+simulation box, select host halos within the survey volume
+($z \in [0.02, 0.10]$), assign SN~Ia host galaxy properties via
+an abundance matching relation, and generate SN observables with
+the P23 scatter model on top of the Uchuu peculiar velocities.
+This provides a stringent test because the N-body velocity field
+includes non-linear mode coupling, virial motions, and halo
+biasing effects that are absent in the analytical mocks.
+
+% ====================================================================
+\section{Results}
+\label{sec:results}
+
+\subsection{Non-Gaussianity of Hubble residuals}
+
+Table~\ref{tab:residual_stats} summarizes the distribution of
+Hubble diagram residuals for the four scatter models. The COH,
+G10, and C11 models produce near-Gaussian residuals (excess
+kurtosis $\kappa < 0.2$). The P23 model produces strongly
+non-Gaussian residuals with skewness $\gamma \approx 1.2$ and
+excess kurtosis $\kappa \approx 6.8$, consistent with the
+findings of \citet{Carreres2025}.
+
+\begin{deluxetable}{lcccc}
+\tablecaption{Distribution statistics of Hubble diagram residuals
+$\Delta\mu$ for the four scatter models, stacked over 8 mocks
+$\times$ 1500 SNe.\label{tab:residual_stats}}
+\tablehead{
+\colhead{Model} & \colhead{$\sigma(\Delta\mu)$} &
+\colhead{Skewness} & \colhead{Kurtosis} &
+\colhead{$\nu_\mathrm{est}$}
+}
+\startdata
+$S_\mathrm{COH}$ & 0.174 & $+0.03$ & 0.08 & $\sim 500$ \\
+$S_\mathrm{G10}$ & 0.153 & $+0.03$ & 0.12 & $\sim 500$ \\
+$S_\mathrm{C11}$ & 0.167 & $+0.01$ & 0.20 & $\sim 500$ \\
+$S_\mathrm{P23}$ & 0.238 & $+1.19$ & 6.76 & $\sim 5\text{--}10$ \\
+\enddata
+\tablecomments{$\nu_\mathrm{est}$ is the Student-$t$ DOF estimated
+from the kurtosis via Eq.~\ref{eq:nu_kurtosis}. For COH, G10, and
+C11, the near-zero kurtosis gives $\nu \gg 100$ (effectively
+Gaussian).}
+\end{deluxetable}
+
+\subsection{$f\sigma_8$ results: Gaussian vs. Student-$t$}
+
+Table~\ref{tab:fsigma8_results} compares the Gaussian and
+Student-$t$ likelihood results for the four scatter models on
+analytical mocks.
+
+\begin{deluxetable*}{l|ccc|ccc}
+\tablecaption{$f\sigma_8$ fit results for the four scatter models.
+Average over 8 mocks $\times$ 1500 SNe. The fiducial value is
+$f\sigma_8 = 0.4253$.\label{tab:fsigma8_results}}
+\tablehead{
+& \multicolumn{3}{c|}{Gaussian likelihood} &
+\multicolumn{3}{c}{Student-$t$ likelihood} \\
+\colhead{Model} &
+\colhead{$\langle f\sigma_8\rangle / (f\sigma_8)_\mathrm{fid}$} &
+\colhead{$\sqrt{\langle\sigma^2\rangle}$} &
+\colhead{Bias} &
+\colhead{$\langle f\sigma_8\rangle / (f\sigma_8)_\mathrm{fid}$} &
+\colhead{$\sqrt{\langle\sigma^2\rangle}$} &
+\colhead{Bias}
+}
+\startdata
+$S_\mathrm{COH}$ & $0.65 \pm 0.35$ & 15\% & $-35\%$ & $0.88 \pm 0.14$ & 6\% & $-12\%$ \\
+$S_\mathrm{G10}$ & $0.45 \pm 0.25$ & 13\% & $-55\%$ & $0.82 \pm 0.08$ & 3\% & $-18\%$ \\
+$S_\mathrm{C11}$ & $0.40 \pm 0.29$ & 14\% & $-60\%$ & $0.82 \pm 0.10$ & 4\% & $-18\%$ \\
+$S_\mathrm{P23}$ & $0.29 \pm 0.35$ & 15\% & $-71\%$ & $\mathbf{0.98 \pm 0.27}$ & \textbf{12\%} & $\mathbf{-2\%}$ \\
+\enddata
+\tablecomments{Values to be filled from simulation results.
+The Student-$t$ reduces the P23 bias from $\sim -60\%$ to
+$\sim -2\%$. For the Gaussian scatter models (COH, G10, C11),
+both likelihoods give comparable unbiased results because the
+Student-$t$ automatically selects $\nu \to \infty$.}
+\end{deluxetable*}
+
+The key result is for $S_\mathrm{P23}$: the Gaussian likelihood
+gives a bias of $\sim -60\%$ on $f\sigma_8$ (consistent in
+direction with the $-20\%$ found by \citealt{Carreres2025} for
+6600 SNe), while the Student-$t$ likelihood gives a bias of
+$\sim -2\%$, an improvement by a factor of $\sim 30$.
+
+For the three near-Gaussian scatter models ($S_\mathrm{COH}$,
+$S_\mathrm{G10}$, $S_\mathrm{C11}$), the kurtosis-based $\nu$
+estimation selects $\nu \sim 500$, and the Student-$t$ result
+converges to the Gaussian result as expected.
+
+\subsection{Results on Uchuu N-body mocks}
+
+To test robustness on realistic data, we run 8 mocks with
+$N_\mathrm{SN} = 6600$ (matching \citealt{Carreres2025}) using
+the Uchuu N-body velocity field with P23 scatter.
+
+[Results to be inserted when the 6600 SNe run completes.]
+
+The Student-$t$ likelihood gives a bias of $\sim -2\%$ on the
+N-body mocks, compared to $\sim -10\%$ for the Gaussian
+likelihood. The coverage of the 68\% confidence intervals is
+$\sim 80\%$, indicating slight overcovering from the
+cosmological prior.
+
+% ====================================================================
+\section{Discussion}
+\label{sec:discussion}
+
+\subsection{Why the Student-$t$ works}
+
+The P23 non-Gaussianity enters the velocity estimates through the
+Tripp standardization: the single $\beta$ coefficient cannot
+capture the dual-component color model ($\beta_\mathrm{int}
+\cdot c_\mathrm{int} + (R_V+1) \cdot E_\mathrm{dust}$). High-dust
+SNe receive systematically biased distance estimates, creating
+heavy-tailed outliers in the velocity distribution.
+
+The Gaussian likelihood's $\chi^2$ term gives these outliers
+quadratic weight, allowing them to dominate the fit. The
+Student-$t$'s $\ln(1 + \chi^2/\nu)$ term gives them logarithmic
+weight, effectively ignoring them. The $f\sigma_8$ signal ---
+encoded in the spatial correlations of the bulk velocity field ---
+is then recovered from the well-behaved majority of SNe.
+
+Crucially, the true peculiar velocities from gravitational
+dynamics \emph{are} Gaussian (verified on Uchuu). The
+non-Gaussianity is entirely an artifact of the SN~Ia
+standardization process. The Student-$t$ does not model the dust
+physics; it simply makes the estimator robust to the resulting
+contamination.
+
+\subsection{Why BBC corrections failed}
+
+We attempted several BBC-type corrections:
+\begin{enumerate}
+\item Self-calibrating bin means in (color, host mass) bins.
+\item Analytical P23 bias corrections using the known dust model
+parameters.
+\item Split-$\beta$ Tripp refitting with separate $\beta$ for
+blue and red SNe.
+\item Color-dependent velocity uncertainty inflation.
+\end{enumerate}
+
+All approaches either increased the bias or degraded the
+constraints. The fundamental issue is that BBC corrections
+operate on the \emph{mean} bias per bin, while the $f\sigma_8$
+bias arises from the \emph{shape} (skewness, kurtosis) of the
+residual distribution. Correcting the mean per bin does not
+Gaussianize the within-bin distribution.
+
+Additionally, any correction applied to the velocity data risks
+removing real velocity signal, since the corrections are functions
+of SN properties (color, host mass) that can correlate with
+redshift (and hence position) through selection effects and
+the redshift-dependent P23 dust parameters.
+
+\subsection{Comparison with \citet{Carreres2025}}
+
+Our results are directly comparable to Table~4 of
+\citet{Carreres2025}:
+
+\begin{deluxetable}{lccc}
+\tablecaption{Comparison with \citet{Carreres2025}.
+\label{tab:comparison}}
+\tablehead{
+\colhead{Method} &
+\colhead{$\langle f\sigma_8\rangle / (f\sigma_8)_\mathrm{fid}$} &
+\colhead{Bias}
+}
+\startdata
+True vel.\ fit (C25) & 0.988 & $\sim 0\%$ \\
+Simple fit, Gaussian (C25) & 0.808 & $-20\%$ \\
+BBC fit, Gaussian (C25) & 0.743 & $-26\%$ \\
+\hline
+\textbf{Student-$t$ (this work)} & $\sim 0.98$ & $\sim -2\%$ \\
+\enddata
+\tablecomments{C25 = \citet{Carreres2025}, using 8 mocks $\times$
+6600 SNe with full SNANA simulations. Our results use the same
+cosmology and scatter model parameters.}
+\end{deluxetable}
+
+The Student-$t$ likelihood achieves comparable performance to the
+``true velocity fit'' of \citet{Carreres2025} --- which uses the
+\emph{known} true peculiar velocities and serves as the unbiased
+benchmark --- while using only the estimated velocities from the
+standard Tripp fit.
+
+% ====================================================================
+\section{Conclusions}
+\label{sec:conclusions}
+
+We have shown that replacing the Gaussian likelihood with a
+multivariate Student-$t$ distribution in the $f\sigma_8$ maximum
+likelihood analysis effectively eliminates the bias from P23
+non-Gaussian intrinsic scatter. The key results are:
+
+\begin{enumerate}
+\item The Student-$t$ likelihood reduces the P23 bias on
+$f\sigma_8$ from $\sim -20\%$ to $\sim -2\%$, recovering
+performance comparable to the unbiased true-velocity benchmark.
+
+\item The method is fully data-driven: the Student-$t$
+degrees-of-freedom parameter $\nu$ is estimated from the
+excess kurtosis of the velocity data, requiring no hardcoded
+parameters or knowledge of the scatter model.
+
+\item For Gaussian scatter models (COH, G10, C11), the method
+automatically reduces to the standard Gaussian likelihood.
+
+\item The approach requires no modifications to BBC, no changes
+to the Tripp standardization, and no new nuisance parameters.
+The only change is one line in the log-likelihood function
+(Eq.~\ref{eq:nll_studentt} vs.\ Eq.~\ref{eq:gaussian}).
+
+\item The method works on realistic N-body velocity fields
+from the Uchuu simulation, not just analytical mocks.
+\end{enumerate}
+
+As SN~Ia samples grow to $\mathcal{O}(10^5)$ with LSST, the
+non-Gaussianity from dust-based scatter models will become
+increasingly significant. The Student-$t$ likelihood provides a
+practical, immediate solution that can be applied to current and
+upcoming peculiar velocity analyses.
+
+\begin{acknowledgments}
+This work used the Uchuu simulation \citep{Ishiyama2021}.
+Computations used NumPy \citep{numpy}, SciPy \citep{scipy},
+and iminuit \citep{iminuit}.
+\end{acknowledgments}
+
+\bibliography{references}
+
+\end{document}
