@@ -48,11 +48,12 @@ def _load_uchuu_power_spectrum(cosmo_params):
     k_uchuu = data['k']
     Pvv_uchuu = data['Pvv']  # (km/s)^2 (Mpc/h)^3, summed over 3 components
 
-    # P_v(k) = (H0)^2 / k^2 * P_tt(k) for each velocity component
-    # Total P_v = 3 * P_v_component (isotropic)
-    # So P_tt(k) = P_v(k) * k^2 / (3 * H0^2)
+    # For the velocity divergence field theta = f*delta:
+    #   v(k) = H0 * theta(k) * k_hat / k^2
+    #   |v_total(k)|^2 = H0^2 * P_tt(k) / k^2
+    # So: P_tt(k) = P_v_total(k) * k^2 / H0^2
     H0 = 100.0  # km/s per Mpc/h
-    Ptt = Pvv_uchuu * k_uchuu**2 / (3.0 * H0**2)
+    Ptt = Pvv_uchuu * k_uchuu**2 / H0**2
 
     # Filter out k=0 and very small k
     valid = k_uchuu > 1e-4
