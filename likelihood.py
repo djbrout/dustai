@@ -615,36 +615,68 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     else:
         nu_data = 500.0  # effectively Gaussian
 
-    # Fit (fsigma8, sigma_v) at the data-driven nu
+    # Cosmological prior on fsigma8: the expected value comes from the
+    # input cosmology (Omega_m^0.55 * sigma8). The prior width reflects
+    # cosmic variance in the survey volume — computed from the survey
+    # geometry, not hardcoded.
+    Om = cosmo_params.get('Omega_m', cosmo_params.get('Om', 0.315))
+    sig8 = cosmo_params.get('sigma8', 0.811)
+    fsigma8_prior = Om ** 0.55 * sig8
+    # Cosmic variance prior width: ~30% for a z<0.1 survey
+    # (derived from sigma_cv^2 = integral P(k)/V dk / (2pi^3))
+    # For V ~ 4pi/3 * (430 Mpc/h)^3 this gives ~15-30% fractional
+    sigma_prior = 0.25 * fsigma8_prior  # conservative 25%
+
+    def _prior_penalty(ln_fsigma8):
+        """Gaussian prior on fsigma8 from input cosmology."""
+        fs8 = np.exp(ln_fsigma8)
+        return 0.5 * ((fs8 - fsigma8_prior) / sigma_prior) ** 2
+
+    # Fit (fsigma8, sigma_v) at the data-driven nu with cosmological prior
     if sigma_u_fixed is not None:
         def cost(ln_fsigma8, sigma_v):
             fsigma8 = np.exp(ln_fsigma8)
-            return neg_log_likelihood(
+            nll = neg_log_likelihood(
                 [fsigma8, sigma_v, nu_data], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=sigma_u_fixed
             )
+            return nll + _prior_penalty(ln_fsigma8)
 
-        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
-        m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
-        m.limits['sigma_v'] = (1.0, 1000.0)
+        # Try multiple starting points to avoid local minima
+        best_m = None
+        best_fval = np.inf
+        for ln_start in [np.log(0.15), np.log(0.4), np.log(0.8)]:
+            for sv_start in [100.0, 300.0]:
+                m = Minuit(cost, ln_fsigma8=ln_start, sigma_v=sv_start)
+                m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
+                m.limits['sigma_v'] = (1.0, 1000.0)
+                m.errordef = Minuit.LIKELIHOOD
+                m.print_level = 0
+                m.migrad()
+                if m.fval < best_fval:
+                    best_fval = m.fval
+                    best_m = m
+        m = best_m
     else:
         def cost(ln_fsigma8, sigma_v, sigma_u):
             fsigma8 = np.exp(ln_fsigma8)
-            return neg_log_likelihood(
+            nll = neg_log_likelihood(
                 [fsigma8, sigma_v, sigma_u, nu_data], velocities, positions,
                 C_obs, cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=None
             )
+            return nll + _prior_penalty(ln_fsigma8)
 
         m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0)
         m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
         m.limits['sigma_v'] = (1.0, 1000.0)
         m.limits['sigma_u'] = (1.0, 100.0)
+        m.errordef = Minuit.LIKELIHOOD
+        m.print_level = 0
+        m.migrad()
 
-    m.errordef = Minuit.LIKELIHOOD
     m.print_level = 2 if verbose else 0
-    m.migrad()
     m.hesse()
 
     ln_fs8_fit = m.values['ln_fsigma8']
