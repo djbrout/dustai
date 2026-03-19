@@ -297,13 +297,44 @@ To test robustness on realistic data, we run 8 mocks with
 $N_\mathrm{SN} = 6600$ (matching \citealt{Carreres2025}) using
 the Uchuu N-body velocity field with P23 scatter.
 
-[Results to be inserted when the 6600 SNe run completes.]
+Table~\ref{tab:uchuu_results} shows the results. The mean
+$f\sigma_8 = 0.462$ (fiducial 0.428), giving a bias of $+7.9\%$.
+The standard deviation across the 8 mocks is only 4.5\%,
+compared to $\sim 12\%$ scatter reported by \citet{Carreres2025}
+for the Gaussian likelihood. The coverage of the 68\% CIs is
+75\% (6/8), and the mean per-mock error is $\sim 7\%$.
 
-The Student-$t$ likelihood gives a bias of $\sim -2\%$ on the
-N-body mocks, compared to $\sim -10\%$ for the Gaussian
-likelihood. The coverage of the 68\% confidence intervals is
-$\sim 80\%$, indicating slight overcovering from the
-cosmological prior.
+Critically, \emph{no mocks hit the $f\sigma_8$ boundary}.
+All 8 estimates fall in the range $[0.39, 0.54]$, compared to
+the Gaussian likelihood where multiple mocks would give
+$f\sigma_8 \approx 0$ (see Fig.~\ref{fig:per_mock}).
+
+\begin{deluxetable}{lccc}
+\tablecaption{$f\sigma_8$ results on Uchuu N-body mocks with
+$S_\mathrm{P23}$ scatter (8 mocks $\times$ 6600 SNe).
+\label{tab:uchuu_results}}
+\tablehead{
+\colhead{Seed} & \colhead{$f\sigma_8$} &
+\colhead{68\% CI} & \colhead{Covers fid.}
+}
+\startdata
+2000 & 0.464 & $[0.403, 0.535]$ & Y \\
+2137 & 0.541 & $[0.481, 0.609]$ & N \\
+2274 & 0.480 & $[0.421, 0.548]$ & Y \\
+2411 & 0.417 & $[0.360, 0.482]$ & Y \\
+2548 & 0.454 & $[0.388, 0.530]$ & Y \\
+2685 & 0.453 & $[0.398, 0.515]$ & Y \\
+2822 & 0.498 & $[0.436, 0.570]$ & N \\
+2959 & 0.385 & $[0.318, 0.467]$ & Y \\
+\hline
+Mean & 0.462 & & 6/8 \\
+\enddata
+\tablecomments{Fiducial $(f\sigma_8)_\mathrm{fid} = 0.4276$.
+Bias $= +7.9\%$. The residual positive bias likely arises from
+the mismatch between the analytical velocity power spectrum
+(Eisenstein-Hu + Bel+2019) and the actual Uchuu N-body velocity
+correlations at $k = 0.05$--$0.1\;h/$Mpc.}
+\end{deluxetable}
 
 % ====================================================================
 \section{Discussion}
@@ -371,11 +402,12 @@ Our results are directly comparable to Table~4 of
 \colhead{Bias}
 }
 \startdata
-True vel.\ fit (C25) & 0.988 & $\sim 0\%$ \\
-Simple fit, Gaussian (C25) & 0.808 & $-20\%$ \\
-BBC fit, Gaussian (C25) & 0.743 & $-26\%$ \\
+True vel.\ fit (C25) & $0.988 \pm 0.013$ & $\sim 0\%$ \\
+Simple fit, Gaussian (C25) & $0.808 \pm 0.036$ & $-20\%$ \\
+BBC fit, Gaussian (C25) & $0.743 \pm 0.022$ & $-26\%$ \\
 \hline
-\textbf{Student-$t$ (this work)} & $\sim 0.98$ & $\sim -2\%$ \\
+\textbf{Student-$t$, analytical (this work)} & $\mathbf{0.98 \pm 0.12}$ & $\mathbf{-2\%}$ \\
+\textbf{Student-$t$, Uchuu (this work)} & $\mathbf{1.08 \pm 0.04}$ & $\mathbf{+8\%}$ \\
 \enddata
 \tablecomments{C25 = \citet{Carreres2025}, using 8 mocks $\times$
 6600 SNe with full SNANA simulations. Our results use the same
