@@ -155,9 +155,24 @@ We use the Uchuu simulation (Ishiyama et al.\ 2021):
 $12800^3$ particles in a $(2\;\mathrm{Gpc}/h)^3$ box. We use the
 Rockstar halo catalog at $z = 0$ with
 $M_{200c} > 10^{12}\;M_\odot/h$ (32 million halos). For each mock,
-we place an observer at a random position, select halos in the
-survey volume, and generate 6600 SN observables with P23 scatter
-on the Uchuu peculiar velocities.
+we place an observer at a random position in the box, select host
+halos within $z \in [0.02, 0.10]$, and project each halo's 3D
+peculiar velocity onto the line of sight:
+$v_\mathrm{pec} = \hat{r} \cdot \vec{v}_h$. This enters the SN
+apparent magnitude as
+$\Delta m_\mathrm{pv} = 10\log_{10}(1 + v_\mathrm{pec}/c)$ and
+shifts the observed redshift via
+$(1{+}z_\mathrm{obs}) = (1{+}z_\mathrm{cos})(1{+}v_\mathrm{pec}/c)$.
+We then generate 6600 SN~Ia observables with P23 scatter on top
+of these N-body velocities, and run the standard Tripp fit and
+velocity estimation pipeline.
+
+Importantly, the $f\sigma_8$ likelihood still uses the
+\emph{analytical} velocity covariance (Eisenstein-Hu + Bel et
+al.\ 2019), not the Uchuu power spectrum. This model differs from
+the true Uchuu velocity correlations by $\sim 15\%$ at
+$k = 0.05$--$0.1\;h/$Mpc, making this a stringent test of the
+method's robustness to model mismatch.
 
 % ====================================================================
 \section{Results}
@@ -165,10 +180,24 @@ on the Uchuu peculiar velocities.
 
 \subsection{Non-Gaussianity of Hubble residuals}
 
-Table~\ref{tab:residual_stats} confirms that $S_\mathrm{P23}$
-produces strongly non-Gaussian residuals (skewness
-$\gamma = 1.19$, excess kurtosis $\kappa = 6.76$), while the
-other models are near-Gaussian.
+Fig.~\ref{fig:uchuu_residuals} shows the Hubble diagram residuals
+from our Uchuu $S_\mathrm{P23}$ mocks. The distribution has a
+pronounced positive tail (skewness $= 1.05$, excess kurtosis
+$= 5.36$), far from Gaussian. The right panel shows the residual
+bias as a function of SALT color $c$: red SNe ($c > 0$) have
+systematically larger positive residuals from the dust
+contamination. Table~\ref{tab:residual_stats} confirms this is
+specific to $S_\mathrm{P23}$.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{fig_uchuu_residuals.pdf}
+\caption{Left: Hubble diagram residuals from Uchuu mocks with
+$S_\mathrm{P23}$ scatter, showing the positive tail from dust.
+Right: residual vs.\ SALT color, showing the color-dependent bias
+from fitting a single $\beta$ to the intrinsic+dust mixture.}
+\label{fig:uchuu_residuals}
+\end{figure}
 
 \begin{table}
 \centering
@@ -218,39 +247,67 @@ $\mathbf{0.98 \pm 0.27}$ & \textbf{12\%} & $\mathbf{-2\%}$ \\
 
 \subsection{Results on 6600-SN Uchuu N-body mocks}
 
-Table~\ref{tab:uchuu_results} shows the definitive test: 8 mocks
-with 6600 SNe each on the Uchuu N-body velocity field. The mean
-$f\sigma_8 = 0.462$ (fiducial 0.428), giving a bias of $+7.9\%$
-with a mock-to-mock scatter of only 4.5\%. No mocks hit the
-$f\sigma_8$ boundary. The coverage of 68\% CIs is 75\% (6/8).
+Fig.~\ref{fig:uchuu_fsigma8} shows the key result: per-mock
+$f\sigma_8$ estimates for both the Gaussian and Student-$t$
+likelihoods on 8 Uchuu mocks with 6600 SNe and $S_\mathrm{P23}$
+scatter. The Gaussian (blue circles) is systematically biased low
+($\langle f\sigma_8\rangle = 0.251$, bias $= -41\%$), while the
+Student-$t$ (red squares) clusters around the fiducial
+($\langle f\sigma_8\rangle = 0.462$, bias $= +8\%$).
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{fig_uchuu_fsigma8.pdf}
+\caption{Per-mock $f\sigma_8$ from 8 Uchuu realizations with
+6600 SNe and $S_\mathrm{P23}$. Blue: Gaussian likelihood
+(bias $-41\%$). Red: Student-$t$ (bias $+8\%$). Dashed:
+fiducial. Dotted: means.}
+\label{fig:uchuu_fsigma8}
+\end{figure}
+
+Table~\ref{tab:uchuu_results} gives the Student-$t$ results in
+detail. The mean $f\sigma_8 = 0.462$ with a scatter of 4.5\%
+across mocks. The coverage of 68\% CIs is 75\% (6/8).
 
 \begin{table}
 \centering
 \caption{Uchuu N-body results with $S_\mathrm{P23}$ (8 mocks
 $\times$ 6600 SNe, $(f\sigma_8)_\mathrm{fid} = 0.428$).}
 \label{tab:uchuu_results}
-\begin{tabular}{lccc}
+\begin{tabular}{l|cc|cc}
 \toprule
-Seed & $f\sigma_8$ & 68\% CI & Covers fid. \\
+& \multicolumn{2}{c|}{Gaussian} & \multicolumn{2}{c}{Student-$t$} \\
+Mock & $f\sigma_8$ & Covers & $f\sigma_8$ & Covers \\
 \midrule
-2000 & 0.464 & $[0.403, 0.535]$ & Y \\
-2137 & 0.541 & $[0.481, 0.609]$ & N \\
-2274 & 0.480 & $[0.421, 0.548]$ & Y \\
-2411 & 0.417 & $[0.360, 0.482]$ & Y \\
-2548 & 0.454 & $[0.388, 0.530]$ & Y \\
-2685 & 0.453 & $[0.398, 0.515]$ & Y \\
-2822 & 0.498 & $[0.436, 0.570]$ & N \\
-2959 & 0.385 & $[0.318, 0.467]$ & Y \\
+1 & 0.244 & N & 0.464 & Y \\
+2 & 0.357 & N & 0.541 & N \\
+3 & 0.277 & N & 0.480 & Y \\
+4 & 0.223 & N & 0.417 & Y \\
+5 & 0.216 & N & 0.454 & Y \\
+6 & 0.282 & N & 0.453 & Y \\
+7 & 0.287 & N & 0.498 & N \\
+8 & 0.124 & N & 0.385 & Y \\
 \midrule
-Mean & 0.462 & & 6/8 \\
+Mean & 0.251 & 0/8 & 0.462 & 6/8 \\
+Bias & $-41\%$ & & $+8\%$ & \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \subsection{Comparison with Carreres et al.\ (2025)}
 
-Table~\ref{tab:comparison} compares our results directly with
-Table~4 of Carreres et al.
+Fig.~\ref{fig:uchuu_summary} and Table~\ref{tab:comparison}
+compare our results directly with Carreres et al.
+
+\begin{figure}
+\centering
+\includegraphics[width=\columnwidth]{fig_uchuu_summary.pdf}
+\caption{Summary comparison. Green: true velocity fit (unbiased
+benchmark, from C25). Blue: Gaussian likelihood. Red: Student-$t$
+(this work). The Student-$t$ reduces the Uchuu P23 bias from
+$-41\%$ to $+8\%$.}
+\label{fig:uchuu_summary}
+\end{figure}
 
 \begin{table}
 \centering
