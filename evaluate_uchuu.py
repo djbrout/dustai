@@ -28,7 +28,7 @@ from likelihood import fit_fsigma8
 # ---------------------------------------------------------------------------
 
 N_SN = 1500
-N_MOCKS = 8           # more mocks since Uchuu is cheap
+N_MOCKS = 16          # more mocks for better statistics
 SCATTER_MODEL = "P23"
 FSIGMA8_FID = FIDUCIAL_COSMO["fsigma8"]
 SIGMA_U_FIXED = 21.0
