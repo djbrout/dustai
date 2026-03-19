@@ -32,6 +32,8 @@ N_MOCKS = 8           # more mocks since Uchuu is cheap
 SCATTER_MODEL = "P23"
 FSIGMA8_FID = FIDUCIAL_COSMO["fsigma8"]
 SIGMA_U_FIXED = 21.0
+# Use Uchuu-measured velocity PS for the covariance model
+UCHUU_COSMO = {**FIDUCIAL_COSMO, 'use_uchuu_ps': True}
 Z_RANGE = (0.02, 0.1)
 
 
@@ -98,7 +100,7 @@ def run_one_mock(seed: int) -> dict:
             velocities=velocities,
             positions=positions,
             C_obs=C_obs,
-            cosmo_params=FIDUCIAL_COSMO,
+            cosmo_params=UCHUU_COSMO,
             sigma_u_fixed=SIGMA_U_FIXED,
         )
 

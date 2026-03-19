@@ -85,16 +85,16 @@ def _default_power_spectrum_table(cosmo_params):
     Ptt   : ndarray, shape (Nk,)
         P_theta_theta(k) in (Mpc/h)^3, where theta = f * delta.
     """
-    h = cosmo_params.get('h', 0.674)
-    Om = cosmo_params.get('Om', 0.315)
-    ns = cosmo_params.get('ns', 0.965)
+    h = cosmo_params.get('h', cosmo_params.get('H0', 67.4) / 100.0)
+    Om = cosmo_params.get('Om', cosmo_params.get('Omega_m', 0.315))
+    ns = cosmo_params.get('ns', cosmo_params.get('n_s', 0.965))
     sigma8 = cosmo_params.get('sigma8', 0.811)
     f = cosmo_params.get('f', Om ** 0.55)
 
     k_arr = np.logspace(-4, 1, 500)  # h/Mpc
 
     # Eisenstein-Hu transfer function (no-wiggle approximation)
-    Ob = cosmo_params.get('Ob', 0.049)
+    Ob = cosmo_params.get('Ob', cosmo_params.get('Omega_b', 0.049))
     theta_cmb = 2.7255 / 2.7  # T_cmb / 2.7 K
     omega_m = Om * h ** 2
     omega_b = Ob * h ** 2
@@ -233,13 +233,17 @@ def compute_velocity_covariance(positions, fsigma8, sigma_u, cosmo_params):
         Velocity covariance matrix in (km/s)^2.
     """
     N = len(positions)
-    H0 = cosmo_params.get('H0', 67.4)  # km/s/Mpc
+    h_val = cosmo_params.get('h', cosmo_params.get('H0', 67.4) / 100.0)
+    H0 = h_val * 100.0  # km/s/Mpc
 
-    # Try Uchuu-measured PS first, fall back to analytical
-    uchuu_ps = _load_uchuu_power_spectrum(cosmo_params)
-    if uchuu_ps is not None:
-        k_arr, Ptt = uchuu_ps
-        # Uchuu PS already includes non-linear effects, no correction needed
+    # Use Uchuu-measured PS if explicitly requested via cosmo_params
+    if cosmo_params.get('use_uchuu_ps', False):
+        uchuu_ps = _load_uchuu_power_spectrum(cosmo_params)
+        if uchuu_ps is not None:
+            k_arr, Ptt = uchuu_ps
+        else:
+            k_arr, Ptt = _default_power_spectrum_table(cosmo_params)
+            Ptt = _nonlinear_correction(k_arr, Ptt, cosmo_params)
     else:
         k_arr, Ptt = _default_power_spectrum_table(cosmo_params)
         Ptt = _nonlinear_correction(k_arr, Ptt, cosmo_params)
