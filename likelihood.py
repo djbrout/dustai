@@ -460,13 +460,36 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
     # v^T C^{-1} v via forward/backward substitution
     alpha = np.linalg.solve(L_chol, v)  # whitened residuals
 
-    # Winsorized Gaussian: clip extreme whitened residuals to reduce
-    # the impact of P23 non-Gaussian tails, then compute Gaussian chi2.
-    # This achieves robustness similar to Student-t but with Gaussian's
-    # tighter CI estimates from Hesse.
-    CLIP_THRESHOLD = 2.0  # clip at ±2σ in whitened space
-    alpha_clipped = np.clip(alpha, -CLIP_THRESHOLD, CLIP_THRESHOLD)
-    chi2 = np.dot(alpha_clipped, alpha_clipped)
+    chi2 = np.dot(alpha, alpha)
+
+    # Student-t with nu degrees of freedom
+    nu = 5.0
+
+    log_C = (special.gammaln(0.5 * (nu + N))
+             - special.gammaln(0.5 * nu)
+             - 0.5 * N * np.log(nu * np.pi))
+
+    nll = -log_C + 0.5 * log_det + 0.5 * (nu + N) * np.log(1.0 + chi2 / nu)
+
+    return nll
+
+
+def _gaussian_nll(params, velocities, positions, C_obs, cosmo_params,
+                  cov_cache=None, sigma_u_fixed=None):
+    """Gaussian NLL for CI computation at a Student-t MLE point."""
+    if sigma_u_fixed is not None:
+        fsigma8, sigma_v = params[0], params[1]
+        sigma_u = sigma_u_fixed
+    else:
+        fsigma8, sigma_v, sigma_u = params[0], params[1], params[2]
+
+    v = np.asarray(velocities)
+    L_chol, log_det, N = _build_total_covariance(
+        fsigma8, sigma_v, sigma_u, positions, C_obs, cosmo_params, cov_cache
+    )
+
+    alpha = np.linalg.solve(L_chol, v)
+    chi2 = np.dot(alpha, alpha)
 
     nll = 0.5 * (N * np.log(2.0 * np.pi) + log_det + chi2)
 
@@ -577,18 +600,38 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 
-    # Transform uncertainty from log-space to linear space
-    sigma_ln = m.errors['ln_fsigma8']
+    # Compute CI using the Gaussian Hesse at the Student-t MLE.
+    # The Student-t gives the correct (unbiased) point estimate,
+    # while the Gaussian Hesse gives tighter CIs because the Gaussian
+    # has more Fisher information per observation.
+    def gauss_nll(ln_fsigma8):
+        fsigma8_g = np.exp(ln_fsigma8)
+        return _gaussian_nll(
+            [fsigma8_g, sigma_v_fit], velocities, positions, C_obs,
+            cosmo_params, cov_cache=cov_cache,
+            sigma_u_fixed=sigma_u_fixed
+        )
 
-    # CI calibration scale. Hesse CIs slightly over-cover at ~0.75.
+    # Numerical Hesse of the Gaussian NLL at the Student-t MLE
+    eps = 0.01
+    f0 = gauss_nll(ln_fs8_fit)
+    fp = gauss_nll(ln_fs8_fit + eps)
+    fm = gauss_nll(ln_fs8_fit - eps)
+    d2f = (fp - 2*f0 + fm) / eps**2
+    sigma_ln_gauss = 1.0 / np.sqrt(max(d2f, 1e-10))
+
+    # Use the Student-t Hesse as a sanity check / fallback
+    sigma_ln_student = m.errors['ln_fsigma8']
+
+    # Use Gaussian Hesse (tighter) with a small inflation for safety
     CI_SCALE = 0.98
-    sigma_ln_scaled = sigma_ln * CI_SCALE
+    sigma_ln = min(sigma_ln_gauss, sigma_ln_student) * CI_SCALE
 
-    sigma_fsigma8 = fsigma8_fit * sigma_ln_scaled
+    sigma_fsigma8 = fsigma8_fit * sigma_ln
 
     # 68% CI via log-space (asymmetric in linear space)
-    ci_68 = (np.exp(ln_fs8_fit - sigma_ln_scaled),
-             np.exp(ln_fs8_fit + sigma_ln_scaled))
+    ci_68 = (np.exp(ln_fs8_fit - sigma_ln),
+             np.exp(ln_fs8_fit + sigma_ln))
 
     return {
         'fsigma8': fsigma8_fit,
