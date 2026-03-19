@@ -538,33 +538,30 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     - Produces better-calibrated CIs from Hesse
     """
 
-    # Fix sigma_v at 250 km/s to reduce the number of free parameters
-    # and get tighter CIs on fsigma8. The typical velocity noise floor
-    # from non-linear motions and residual scatter is ~200-300 km/s.
-    SIGMA_V_FIXED = 250.0
-
     if sigma_u_fixed is not None:
-        def cost(ln_fsigma8):
+        def cost(ln_fsigma8, sigma_v):
             fsigma8 = np.exp(ln_fsigma8)
             return neg_log_likelihood(
-                [fsigma8, SIGMA_V_FIXED], velocities, positions, C_obs,
+                [fsigma8, sigma_v], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=sigma_u_fixed
             )
 
-        m = Minuit(cost, ln_fsigma8=np.log(0.4))
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0)
         m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
+        m.limits['sigma_v'] = (1.0, 1000.0)
         m.errordef = Minuit.LIKELIHOOD
     else:
-        def cost(ln_fsigma8, sigma_u):
+        def cost(ln_fsigma8, sigma_v, sigma_u):
             fsigma8 = np.exp(ln_fsigma8)
             return neg_log_likelihood(
-                [fsigma8, SIGMA_V_FIXED, sigma_u], velocities, positions, C_obs,
+                [fsigma8, sigma_v, sigma_u], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache, sigma_u_fixed=None
             )
 
-        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_u=21.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0)
         m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
+        m.limits['sigma_v'] = (1.0, 1000.0)
         m.limits['sigma_u'] = (1.0, 100.0)
         m.errordef = Minuit.LIKELIHOOD
 
@@ -576,24 +573,61 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
 
     ln_fs8_fit = m.values['ln_fsigma8']
     fsigma8_fit = np.exp(ln_fs8_fit)
-    sigma_v_fit = SIGMA_V_FIXED
+    sigma_v_fit = m.values['sigma_v']
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 
-    # Transform uncertainty from log-space to linear space
-    sigma_ln = m.errors['ln_fsigma8']
+    # Compute CI via profile likelihood scan on ln_fsigma8
+    # This is more robust than Hesse for non-Gaussian likelihoods
+    nll_min = m.fval
+    delta_nll_target = 0.5  # 68% CI for 1 parameter
 
-    # Scale CI to calibrate coverage. The raw Hesse CIs slightly
-    # overcoverage at ~0.75. A small shrinkage factor improves both
-    # coverage calibration and the width score term.
-    CI_SCALE = 0.98
-    sigma_ln_scaled = sigma_ln * CI_SCALE
+    # Scan ln_fsigma8 grid, profiling over sigma_v at each point
+    n_scan = 40
+    ln_grid = np.linspace(np.log(0.01), np.log(2.0), n_scan)
+    nll_profile = np.zeros(n_scan)
 
-    sigma_fsigma8 = fsigma8_fit * sigma_ln_scaled
+    for i_g, ln_fs8_g in enumerate(ln_grid):
+        def cost_sv(sigma_v):
+            fsigma8_g = np.exp(ln_fs8_g)
+            return neg_log_likelihood(
+                [fsigma8_g, sigma_v], velocities, positions, C_obs,
+                cosmo_params, cov_cache=cov_cache,
+                sigma_u_fixed=sigma_u_fixed
+            )
+        from scipy.optimize import minimize_scalar
+        res_sv = minimize_scalar(cost_sv, bounds=(1.0, 1000.0), method='bounded')
+        nll_profile[i_g] = res_sv.fun
 
-    # 68% CI via log-space (asymmetric in linear space)
-    ci_68 = (np.exp(ln_fs8_fit - sigma_ln_scaled),
-             np.exp(ln_fs8_fit + sigma_ln_scaled))
+    # Find 68% CI from profile likelihood
+    delta_nll = nll_profile - nll_min
+    # Interpolate to find crossing points
+    from scipy.interpolate import interp1d
+
+    # Lower bound
+    mask_lo = ln_grid < ln_fs8_fit
+    if np.any(delta_nll[mask_lo] > delta_nll_target):
+        f_lo = interp1d(delta_nll[mask_lo], ln_grid[mask_lo], kind='linear')
+        try:
+            ln_lo = float(f_lo(delta_nll_target))
+        except ValueError:
+            ln_lo = ln_grid[0]
+    else:
+        ln_lo = ln_grid[0]
+
+    # Upper bound
+    mask_hi = ln_grid > ln_fs8_fit
+    if np.any(delta_nll[mask_hi] > delta_nll_target):
+        f_hi = interp1d(delta_nll[mask_hi], ln_grid[mask_hi], kind='linear')
+        try:
+            ln_hi = float(f_hi(delta_nll_target))
+        except ValueError:
+            ln_hi = ln_grid[-1]
+    else:
+        ln_hi = ln_grid[-1]
+
+    ci_68 = (np.exp(ln_lo), np.exp(ln_hi))
+    sigma_fsigma8 = 0.5 * (ci_68[1] - ci_68[0])
 
     return {
         'fsigma8': fsigma8_fit,
