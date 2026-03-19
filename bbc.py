@@ -631,44 +631,55 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- BBC color-dependent bias correction ---
-    # The P23 model uses β_int ~ 2.07 for intrinsic color and (R_V+1)*E_dust
-    # for dust reddening. The Tripp fit uses a single β (~3.1) for both.
-    # For red SNe (high color = high dust), the single β under-corrects
-    # the dust contribution → positive residual bias.
-    # For blue SNe, it over-corrects → negative residual bias.
+    # --- Analytical P23 bias correction ---
+    # The Tripp formula uses a single β for the color term, but P23 has:
+    #   - Intrinsic: β_int * c_int (β_int ~ 2.07)
+    #   - Dust: (R_V + 1) * E_dust (R_V ~ 1.66 or 3.25 depending on mass)
+    # The Tripp β_fit is a compromise. The residual bias per SN is:
+    #   bias = (β_int - β_fit) * c_int + (R_V+1 - β_fit) * E_dust
     #
-    # Correction: estimate the expected mu_bias as a function of color
-    # using the P23 model parameters and subtract it from delta_mu.
-    #
-    # The Tripp residual bias for a SN with color c is approximately:
-    #   delta_mu_bias(c) ≈ (beta_tripp - beta_eff(c)) * c_dust_fraction(c)
-    # where beta_eff depends on the dust/intrinsic color mixture.
-    #
-    # Simpler approach: bin in color and compute mean residual, then subtract.
-    # This is self-calibrating BBC within the mock.
+    # We estimate E[E_dust | c, mass] analytically from the P23 priors
+    # using the Gaussian(c_int) * Exponential(E_dust) posterior.
 
-    delta_mu_masked = tripp["delta_mu"][mask]
     c_masked = c[mask]
-    z_masked = obs["z_obs"][mask]
     log_mass_masked = obs["log_mass"][mask]
+    delta_mu_masked = tripp["delta_mu"][mask]
     J_z_masked = vel["J_z"][mask]
+    beta_fit = tripp["beta"]
 
-    # Compute color-dependent bias correction by binning
-    n_c_bins = 15
-    c_edges = np.linspace(-0.3, 0.3, n_c_bins + 1)
-    c_bin_idx = np.clip(np.digitize(c_masked, c_edges) - 1, 0, n_c_bins - 1)
+    # P23 parameters
+    mu_c_int = -0.07
+    sigma_c_int = 0.05
+    beta_int_mean = 2.07
 
-    # Also bin by host mass (2 bins: high/low mass) for mass-step correction
+    # tau depends on host mass (using z<0.1 values since our range is 0.02-0.1)
     high_mass = log_mass_masked > 10.0
+    tau = np.where(high_mass, 0.11, 0.14)
+    # Mean R_V + 1 by host mass
+    rv_plus1 = np.where(high_mass, 1.66 + 1.0, 3.25 + 1.0)
 
-    # Compute mean residual in each (color, mass) bin
-    mu_bias = np.zeros_like(delta_mu_masked)
-    for im in [False, True]:
-        for ic in range(n_c_bins):
-            sel = (c_bin_idx == ic) & (high_mass == im)
-            if np.sum(sel) > 5:
-                mu_bias[sel] = np.median(delta_mu_masked[sel])
+    # E[E_dust | c, mass]: posterior of Gaussian(c_int) * Exp(E_dust)
+    # The posterior for E_dust is truncated Gaussian with:
+    #   mean_post = c - mu_c_int - sigma_c_int^2 / tau
+    #   std_post = sigma_c_int
+    # Truncated at E_dust >= 0.
+    mean_post = c_masked - mu_c_int - sigma_c_int**2 / tau
+    std_post = sigma_c_int
+
+    # E[X] for truncated normal X ~ TN(mu, sigma, 0, inf):
+    #   E[X] = mu + sigma * phi(alpha) / Phi(-alpha)
+    # where alpha = -mu/sigma
+    from scipy.stats import norm
+    alpha = -mean_post / std_post
+    # phi(alpha) / (1 - Phi(alpha))
+    ratio = norm.pdf(alpha) / np.maximum(norm.sf(alpha), 1e-10)
+    E_dust = mean_post + std_post * ratio
+    E_dust = np.maximum(E_dust, 0.0)
+
+    E_c_int = c_masked - E_dust
+
+    # Expected residual bias from color mismatch
+    mu_bias = (beta_int_mean - beta_fit) * E_c_int + (rv_plus1 - beta_fit) * E_dust
 
     # Corrected Hubble residuals and velocities
     delta_mu_corr = delta_mu_masked - mu_bias
@@ -681,6 +692,6 @@ def apply_corrections_to_mock(mock):
         "delta_mu": delta_mu_corr,
         "colors": c_masked,
         "x1": x1[mask],
-        "z": z_masked,
+        "z": obs["z_obs"][mask],
         "host_mass": log_mass_masked,
     }
