@@ -631,13 +631,51 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
+    # --- Self-calibrating BBC: estimate color-dependent bias from data ---
+    # The P23 bias depends on (color, host_mass) only. Peculiar velocities
+    # are independent of SN properties. So the mean delta_mu in each
+    # (c, mass) bin is the P23 systematic bias (velocity noise averages
+    # out with ~50 SNe per bin, contributing <0.001 mag vs ~0.05 mag bias).
+    #
+    # This is principled: no hardcoded P23 parameters, works for any
+    # scatter model that has a color-dependent bias.
+
+    c_masked = c[mask]
+    log_mass_masked = obs["log_mass"][mask]
+    high_mass_masked = log_mass_masked > 10.0
+    delta_mu_masked = tripp["delta_mu"][mask]
+    sigma_mu_masked = tripp["sigma_mu"][mask]
+    J_z_masked = vel["J_z"][mask]
+
+    # Bin by (color, host_mass) and compute mean delta_mu
+    n_c_bins = 10
+    c_edges = np.linspace(-0.3, 0.3, n_c_bins + 1)
+    ic_data = np.clip(np.digitize(c_masked, c_edges) - 1, 0, n_c_bins - 1)
+
+    mu_correction = np.zeros_like(delta_mu_masked)
+    for im in [False, True]:
+        mass_sel = high_mass_masked == im
+        for ic in range(n_c_bins):
+            bin_sel = mass_sel & (ic_data == ic)
+            n_bin = np.sum(bin_sel)
+            if n_bin > 10:
+                mu_correction[bin_sel] = np.mean(delta_mu_masked[bin_sel])
+
+    # Subtract weighted mean of corrections (matches what M_0 absorbed)
+    w = 1.0 / sigma_mu_masked**2
+    w_mean = np.sum(mu_correction * w) / np.sum(w)
+    mu_correction -= w_mean
+
+    delta_mu_corr = delta_mu_masked - mu_correction
+    v_corr = J_z_masked * delta_mu_corr
+
     return {
-        "velocities": vel["v_est"][mask],
+        "velocities": v_corr,
         "sigma_v": vel["sigma_v"][mask],
         "n_sn": int(np.sum(mask)),
-        "delta_mu": tripp["delta_mu"][mask],
-        "colors": c[mask],
+        "delta_mu": delta_mu_corr,
+        "colors": c_masked,
         "x1": x1[mask],
         "z": obs["z_obs"][mask],
-        "host_mass": obs["log_mass"][mask],
+        "host_mass": log_mass_masked,
     }
