@@ -462,10 +462,9 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
     chi2 = np.dot(alpha, alpha)
 
     # Student-t with nu degrees of freedom
-    # Use nu=3 as a good default for P23 (excess kurtosis ~7.6 maps to nu~3-4)
-    # For Student-t: excess_kurtosis = 6/(nu-4) for nu>4, infinite for nu<=4
-    # P23 has very heavy tails, so nu~3 is appropriate
-    nu = 3.0
+    # For Student-t: excess_kurtosis = 6/(nu-4) for nu>4
+    # P23 kurtosis ~7.6 before BBC. nu=5 gives kurtosis=6, a good match.
+    nu = 5.0
 
     # -log p(v) = -log C(nu,N) + 0.5*log|Sigma| + (nu+N)/2 * log(1 + chi2/nu)
     # log C(nu,N) = log Gamma((nu+N)/2) - log Gamma(nu/2) - N/2 * log(nu*pi)
