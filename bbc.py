@@ -659,30 +659,33 @@ def apply_corrections_to_mock(mock):
     rv_plus1 = np.where(high_mass, 1.66 + 1.0, 3.25 + 1.0)
 
     # E[E_dust | c, mass]: posterior of Gaussian(c_int) * Exp(E_dust)
-    # The posterior for E_dust is truncated Gaussian with:
+    # Truncated Gaussian posterior with:
     #   mean_post = c - mu_c_int - sigma_c_int^2 / tau
-    #   std_post = sigma_c_int
-    # Truncated at E_dust >= 0.
+    #   std_post = sigma_c_int, truncated at E >= 0
+    from scipy.stats import norm
     mean_post = c_masked - mu_c_int - sigma_c_int**2 / tau
     std_post = sigma_c_int
-
-    # E[X] for truncated normal X ~ TN(mu, sigma, 0, inf):
-    #   E[X] = mu + sigma * phi(alpha) / Phi(-alpha)
-    # where alpha = -mu/sigma
-    from scipy.stats import norm
     alpha = -mean_post / std_post
-    # phi(alpha) / (1 - Phi(alpha))
     ratio = norm.pdf(alpha) / np.maximum(norm.sf(alpha), 1e-10)
-    E_dust = mean_post + std_post * ratio
-    E_dust = np.maximum(E_dust, 0.0)
-
+    E_dust = np.maximum(mean_post + std_post * ratio, 0.0)
     E_c_int = c_masked - E_dust
 
-    # Expected residual bias from color mismatch
-    mu_bias = (beta_int_mean - beta_fit) * E_c_int + (rv_plus1 - beta_fit) * E_dust
+    # Full expected color term from P23 model:
+    #   g(c) = beta_int * c_int + (R_V+1) * E_dust
+    g_c = beta_int_mean * E_c_int + rv_plus1 * E_dust
+
+    # The Tripp fit already models the color term as beta_fit * c + M0_offset.
+    # Subtract the linear part (already absorbed by the Tripp fit) to get
+    # only the non-linear residual bias.
+    # Fit: g(c) ≈ a*c + b  →  residual = g(c) - a*c - b
+    c_mean = np.mean(c_masked)
+    g_mean = np.mean(g_c)
+    a_fit = np.sum((c_masked - c_mean) * (g_c - g_mean)) / np.sum((c_masked - c_mean)**2)
+    b_fit = g_mean - a_fit * c_mean
+    mu_bias_nonlinear = g_c - a_fit * c_masked - b_fit
 
     # Corrected Hubble residuals and velocities
-    delta_mu_corr = delta_mu_masked - mu_bias
+    delta_mu_corr = delta_mu_masked - mu_bias_nonlinear
     v_corr = J_z_masked * delta_mu_corr
 
     return {
