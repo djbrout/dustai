@@ -680,10 +680,9 @@ def apply_corrections_to_mock(mock):
     mc_bias_cut = mc_bias[mc_mask]
     mc_high_cut = mc_high[mc_mask]
 
-    # Subtract population mean (absorbed by M_0)
-    mc_bias_cut = mc_bias_cut - np.mean(mc_bias_cut)
-
-    # Build bias lookup: bin by (c, host_mass_bin) and compute mean
+    # Build bias lookup: bin MC by (c, host_mass) and compute mean bias.
+    # Do NOT subtract population mean here — we'll subtract the mock's
+    # own weighted mean later for consistency with what M_0 absorbed.
     n_c_bins = 20
     c_edges = np.linspace(-0.3, 0.3, n_c_bins + 1)
 
@@ -703,16 +702,23 @@ def apply_corrections_to_mock(mock):
     log_mass_masked = obs["log_mass"][mask]
     high_mass_masked = log_mass_masked > 10.0
     delta_mu_masked = tripp["delta_mu"][mask]
+    sigma_mu_masked = tripp["sigma_mu"][mask]
     J_z_masked = vel["J_z"][mask]
 
-    # Look up bias for each SN
+    # Look up MC bias for each mock SN
     ic_data = np.clip(
         np.digitize(c_masked, c_edges) - 1, 0, n_c_bins - 1
     )
-    mu_correction = np.array([
+    mu_bias_raw = np.array([
         bias_table.get((ic_data[i], bool(high_mass_masked[i])), 0.0)
         for i in range(len(c_masked))
     ])
+
+    # Subtract the mock's weighted mean of the MC bias.
+    # This matches what M_0 absorbed in the Tripp fit (weighted by 1/σ²).
+    weights = 1.0 / sigma_mu_masked**2
+    weighted_mean = np.sum(mu_bias_raw * weights) / np.sum(weights)
+    mu_correction = mu_bias_raw - weighted_mean
 
     # Corrected Hubble residuals and velocities
     delta_mu_corr = delta_mu_masked - mu_correction
