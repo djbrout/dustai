@@ -631,106 +631,13 @@ def apply_corrections_to_mock(mock):
         sigma_mu > 0
     )
 
-    # --- Monte Carlo BBC: P23-aware bias correction ---
-    # Generate a large P23 simulation (no PV) to compute the expected
-    # color-dependent bias from the Tripp formula mismatch. Use the
-    # mock's OWN Tripp fit parameters for consistency.
-    #
-    # Physics: under P23, the true color term is β_int*c_int + (R_V+1)*E_dust.
-    # The Tripp formula uses β_fit*c. The difference is the bias.
-    # μ_cos cancels, so the bias depends only on (c, mass), not redshift.
-
-    beta_fit = tripp["beta"]
-    alpha_fit = tripp["alpha"]
-
-    # Generate MC sample from P23 priors
-    rng_bbc = np.random.default_rng(12345)  # fixed seed for reproducibility
-    n_mc = 100000
-
-    # Host mass: match the population (60% high, 40% low)
-    mc_high_mass = rng_bbc.uniform(size=n_mc) < 0.6
-    mc_log_mass = np.where(
-        mc_high_mass,
-        rng_bbc.normal(10.8, 0.4, n_mc),
-        rng_bbc.normal(9.5, 0.6, n_mc),
-    )
-    mc_high = mc_log_mass > 10.0
-
-    # P23 color model
-    mc_c_int = rng_bbc.normal(-0.07, 0.05, n_mc)
-    mc_beta_int = rng_bbc.normal(2.07, 0.22, n_mc)
-    mc_R_V = np.where(
-        mc_high,
-        rng_bbc.normal(1.66, 0.95, n_mc),
-        rng_bbc.normal(3.25, 0.93, n_mc),
-    )
-    mc_R_V = np.clip(mc_R_V, 0.5, 6.0)
-    mc_tau = np.where(mc_high, 0.11, 0.14)
-    mc_E_dust = rng_bbc.exponential(mc_tau)
-    mc_c = mc_c_int + mc_E_dust
-
-    # True color term vs Tripp color term
-    mc_true_color = mc_beta_int * mc_c_int + (mc_R_V + 1.0) * mc_E_dust
-    mc_tripp_color = beta_fit * mc_c
-    mc_bias = mc_true_color - mc_tripp_color
-
-    # Apply same quality cuts as data (|c| < 0.3)
-    mc_mask = np.abs(mc_c) < 0.3
-    mc_c_cut = mc_c[mc_mask]
-    mc_bias_cut = mc_bias[mc_mask]
-    mc_high_cut = mc_high[mc_mask]
-
-    # Build bias lookup: bin MC by (c, host_mass) and compute mean bias.
-    # Do NOT subtract population mean here — we'll subtract the mock's
-    # own weighted mean later for consistency with what M_0 absorbed.
-    n_c_bins = 20
-    c_edges = np.linspace(-0.3, 0.3, n_c_bins + 1)
-
-    bias_table = {}  # (ic, im) -> mean_bias
-    for im in [False, True]:
-        mass_sel = mc_high_cut == im
-        for ic in range(n_c_bins):
-            c_lo, c_hi = c_edges[ic], c_edges[ic + 1]
-            bin_sel = mass_sel & (mc_c_cut >= c_lo) & (mc_c_cut < c_hi)
-            if np.sum(bin_sel) > 10:
-                bias_table[(ic, im)] = np.mean(mc_bias_cut[bin_sel])
-            else:
-                bias_table[(ic, im)] = 0.0
-
-    # Apply corrections to mock data
-    c_masked = c[mask]
-    log_mass_masked = obs["log_mass"][mask]
-    high_mass_masked = log_mass_masked > 10.0
-    delta_mu_masked = tripp["delta_mu"][mask]
-    sigma_mu_masked = tripp["sigma_mu"][mask]
-    J_z_masked = vel["J_z"][mask]
-
-    # Look up MC bias for each mock SN
-    ic_data = np.clip(
-        np.digitize(c_masked, c_edges) - 1, 0, n_c_bins - 1
-    )
-    mu_bias_raw = np.array([
-        bias_table.get((ic_data[i], bool(high_mass_masked[i])), 0.0)
-        for i in range(len(c_masked))
-    ])
-
-    # Subtract the mock's weighted mean of the MC bias.
-    # This matches what M_0 absorbed in the Tripp fit (weighted by 1/σ²).
-    weights = 1.0 / sigma_mu_masked**2
-    weighted_mean = np.sum(mu_bias_raw * weights) / np.sum(weights)
-    mu_correction = mu_bias_raw - weighted_mean
-
-    # Corrected Hubble residuals and velocities
-    delta_mu_corr = delta_mu_masked - mu_correction
-    v_corr = J_z_masked * delta_mu_corr
-
     return {
-        "velocities": v_corr,
+        "velocities": vel["v_est"][mask],
         "sigma_v": vel["sigma_v"][mask],
         "n_sn": int(np.sum(mask)),
-        "delta_mu": delta_mu_corr,
-        "colors": c_masked,
+        "delta_mu": tripp["delta_mu"][mask],
+        "colors": c[mask],
         "x1": x1[mask],
         "z": obs["z_obs"][mask],
-        "host_mass": log_mass_masked,
+        "host_mass": obs["log_mass"][mask],
     }
