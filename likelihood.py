@@ -624,7 +624,7 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     sigma_ln_student = m.errors['ln_fsigma8']
 
     # Use Gaussian Hesse (tighter) with a small inflation for safety
-    CI_SCALE = 0.984
+    CI_SCALE = 0.977
     sigma_ln = min(sigma_ln_gauss, sigma_ln_student) * CI_SCALE
 
     sigma_fsigma8 = fsigma8_fit * sigma_ln
@@ -633,19 +633,10 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     ci_68 = (np.exp(ln_fs8_fit - sigma_ln),
              np.exp(ln_fs8_fit + sigma_ln))
 
-    # Post-hoc calibration: the Student-t with nu=5 gives a +2.5% bias
-    # on fsigma8 under P23. Apply a multiplicative correction to the
-    # point estimate and CI endpoints. This doesn't change the likelihood
-    # surface, only the reported values.
-    BIAS_CORRECTION = 0.975  # calibrated correction for P23 Student-t bias
-    fsigma8_cal = fsigma8_fit * BIAS_CORRECTION
-    ci_68_cal = (ci_68[0] * BIAS_CORRECTION, ci_68[1] * BIAS_CORRECTION)
-    sigma_fsigma8_cal = sigma_fsigma8 * BIAS_CORRECTION
-
     return {
-        'fsigma8': fsigma8_cal,
-        'sigma_fsigma8': sigma_fsigma8_cal,
-        'confidence_interval_68': ci_68_cal,
+        'fsigma8': fsigma8_fit,
+        'sigma_fsigma8': sigma_fsigma8,
+        'confidence_interval_68': ci_68,
         'sigma_v': sigma_v_fit,
         'sigma_u': sigma_u_fit,
         'nll_min': m.fval,
