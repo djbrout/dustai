@@ -622,10 +622,24 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     Om = cosmo_params.get('Omega_m', cosmo_params.get('Om', 0.315))
     sig8 = cosmo_params.get('sigma8', 0.811)
     fsigma8_prior = Om ** 0.55 * sig8
-    # Cosmic variance prior width: ~30% for a z<0.1 survey
-    # (derived from sigma_cv^2 = integral P(k)/V dk / (2pi^3))
-    # For V ~ 4pi/3 * (430 Mpc/h)^3 this gives ~15-30% fractional
-    sigma_prior = 0.25 * fsigma8_prior  # conservative 25%
+    # Prior width: derived from the data's constraining power.
+    # The expected fractional error on fsigma8 from N SNe with
+    # measurement noise sigma_obs and velocity signal sigma_vpec is:
+    #   delta(fsigma8)/fsigma8 ~ sigma_obs / (sigma_vpec * sqrt(N))
+    # This is the Fisher information-based prior width.
+    v = np.asarray(velocities)
+    sigma_v_obs = np.sqrt(np.diag(C_obs)) if C_obs.ndim == 2 else np.sqrt(C_obs)
+    N_sn = len(v)
+    mean_sigma_obs = np.median(sigma_v_obs)
+    # Expected velocity signal: from C_vv at fiducial
+    # sigma_vpec ~ 250-350 km/s for z<0.1 surveys
+    # Use the data's velocity RMS as a proxy (includes both signal and noise)
+    v_rms = np.sqrt(np.mean(v**2))
+    # The signal is a fraction of v_rms: signal ~ v_rms * fsigma8/sqrt(fsigma8^2 + (sigma_obs/v_rms)^2)
+    # Simplified: prior width ~ fsigma8 * mean_sigma_obs / (v_rms * sqrt(N))
+    sigma_prior = fsigma8_prior * mean_sigma_obs / (v_rms * np.sqrt(N_sn))
+    # Ensure a reasonable range
+    sigma_prior = np.clip(sigma_prior, 0.03 * fsigma8_prior, 0.50 * fsigma8_prior)
 
     def _prior_penalty(ln_fsigma8):
         """Gaussian prior on fsigma8 from input cosmology."""
