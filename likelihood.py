@@ -462,8 +462,9 @@ def neg_log_likelihood(params, velocities, positions, C_obs, cosmo_params,
     chi2 = np.dot(alpha, alpha)
 
     # Student-t with nu degrees of freedom
-    # nu=5 gives excess kurtosis=6, well-matched to P23's non-Gaussianity
-    nu = 5.0
+    # nu=3 gives infinite kurtosis, very heavy tails — maximally robust
+    # to P23 non-Gaussianity while remaining a proper distribution
+    nu = 3.0
 
     log_C = (special.gammaln(0.5 * (nu + N))
              - special.gammaln(0.5 * nu)
