@@ -1,1 +1,5 @@
 commit	final_score	bias	coverage_68	status	description
+afd06e4	5.311284	-0.597682	0.7500	baseline	Gaussian likelihood, no BBC corrections
+8819d75	2.988657	0.024546	0.7500	improved	Student-t nu=5, no BBC
+dbd41ad	1.561142	0.025165	0.7500	improved	Student-t nu=5 + log(fsigma8) parameterization
+d19b2fd	1.010705	0.025165	0.7500	improved	Hybrid: Student-t MLE + Gaussian Hesse CIs

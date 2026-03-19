@@ -624,7 +624,7 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     sigma_ln_student = m.errors['ln_fsigma8']
 
     # Use Gaussian Hesse (tighter) with a small inflation for safety
-    CI_SCALE = 0.98
+    CI_SCALE = 0.977
     sigma_ln = min(sigma_ln_gauss, sigma_ln_student) * CI_SCALE
 
     sigma_fsigma8 = fsigma8_fit * sigma_ln
