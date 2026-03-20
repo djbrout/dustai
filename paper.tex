@@ -446,23 +446,64 @@ within $+8\%$.
 \section{Discussion}
 \label{sec:discussion}
 
-\subsection{Why the Student-$t$ works}
+\subsection{Why the Student-$t$ works: the full story}
 
-The true peculiar velocities from gravitational dynamics
-\emph{are} Gaussian --- verified on the Uchuu halo catalog, where
-the line-of-sight velocities have kurtosis $\approx 0$. The
-non-Gaussianity enters entirely through the SN~Ia standardization:
-the single Tripp $\beta$ cannot capture the two-component P23
-color model. High-dust SNe receive biased distance estimates,
-creating heavy-tailed outliers in the velocity vector $\bm{v}$.
+Fig.~\ref{fig:full_story} traces the complete causal chain from
+the P23 dust model to the $f\sigma_8$ bias and its correction:
 
-The Gaussian $\chi^2 = \bm{v}^T\bm{C}^{-1}\bm{v}$ gives these
-outliers \emph{quadratic} weight. A single SN with a $5\sigma$
-residual contributes 25$\times$ more than a typical SN, dominating
-the fit and biasing $f\sigma_8$ low. The Student-$t$
-$\ln(1 + \chi^2/\nu)$ gives them \emph{logarithmic} weight:
-that same outlier contributes $\sim\!\ln(25) \approx 3\times$ more
---- still significant, but not dominant (Fig.~\ref{fig:weighting}).
+\textbf{Steps 1--3:} The P23 model decomposes color into Gaussian
+$c_\mathrm{int}$ + exponential $E_\mathrm{dust}$. The Tripp
+formula fits a single $\beta \approx 3.1$, but the true model
+has $\beta_\mathrm{int} \approx 2.1$ and
+$\beta_\mathrm{dust} = R_V{+}1 \approx 2.7$--4.3. The mismatch
+produces Hubble residuals with skewness $\sim 1$ and excess
+kurtosis $\sim 5$--22.
+
+\textbf{Step 4:} The Tripp $M_0$ absorbs the global mean of the
+residuals, neutralizing the skewness. We verified this: a forward
+model that explicitly corrects the per-SN skewness (via dust
+marginalization) reduces skewness from 0.8 to 0.04 but does
+\emph{not} improve $f\sigma_8$ ($-2.2\% \to -2.8\%$). The
+skewness is harmless because $M_0$ already handles it.
+
+\textbf{Step 5:} The $f\sigma_8$ likelihood uses
+$\chi^2 = \bm{v}^T\bm{C}^{-1}\bm{v}$, a sum of \emph{squared}
+terms. Squaring erases the sign of residuals: a $+5000$ km/s
+outlier and a $-5000$ km/s outlier contribute equally. What
+matters is not whether outliers are positive (skewness) but how
+many large-amplitude outliers exist (kurtosis). With P23, the
+top 5\% of SNe contribute $\sim 30\%$ of $\chi^2$, vs.\ 18\%
+for Gaussian data.
+
+\textbf{Step 6:} The Student-$t$ replaces $\chi^2/2$ with
+$\ln(1 + \chi^2/\nu)$. This logarithmic compression reduces
+outlier leverage: a $5\sigma$ SN contributes $\ln(25) \approx 3
+\times$ instead of $25\times$ its fair share. The velocity
+correlations from $f\sigma_8$ are then recovered from the
+well-behaved majority.
+
+\textbf{Step 7:} BBC corrections operate on the \emph{mean}
+$\Delta\mu$ per bin --- the same quantity $M_0$ already absorbs.
+BBC cannot reduce the kurtosis because the within-bin distribution
+remains non-Gaussian. This explains why BBC makes P23 worse
+($-20\% \to -26\%$ in C25): it introduces additional noise and
+$z$-dependent corrections that can remove velocity signal.
+
+\begin{figure*}
+\centering
+\includegraphics[width=\textwidth]{fig_full_story.pdf}
+\caption{The complete causal chain from P23 dust to $f\sigma_8$
+bias. \textbf{Step 1:} P23 color = Gaussian + Exponential.
+\textbf{Step 2:} Single Tripp $\beta$ cannot fit two components.
+\textbf{Step 3:} Residuals become skewed and heavy-tailed.
+\textbf{Step 4:} $M_0$ absorbs the mean; skewness is harmless.
+\textbf{Step 5:} $\chi^2$ squares residuals, so only kurtosis
+biases $f\sigma_8$.
+\textbf{Step 6:} Student-$t$ down-weights outliers.
+\textbf{Step 7:} BBC fixes the mean (already OK), not the shape.
+Bottom middle: bias on real SNANA P23 data.}
+\label{fig:full_story}
+\end{figure*}
 
 \subsection{Residual $+8\%$ bias on Uchuu}
 \label{sec:residual_bias}
