@@ -550,6 +550,69 @@ modifies the \emph{likelihood}, not the \emph{data}. The
 velocity vector $\bm{v}$ is untouched; only the statistical
 weight of each observation changes.
 
+\subsubsection{A forward model correction flips the skewness}
+\label{sec:forward_flip}
+
+One might hope to improve the residuals by analytically correcting
+for the P23 dust bias. Given a SN with observed color $c$ and host
+mass $M$, we can compute $\mathrm{E}[\mathrm{bias} \mid c, M]$
+by marginalizing over the dust posterior
+$p(E_\mathrm{dust} \mid c, M)$ using the known P23 priors (a
+truncated Gaussian from the convolution of the intrinsic color
+and dust exponential). Subtracting this per-SN correction from
+$\Delta\mu$ should, in principle, remove the color-dependent bias
+and reduce the non-Gaussianity.
+
+Table~\ref{tab:fwd_correction} shows what actually happens: the
+forward model correction \emph{flips} the skewness from $+0.58$
+to $-0.24$, overcorrecting the asymmetry. More importantly, it
+\emph{increases} the residual scatter by $\sim\!9\%$ (from 0.203
+to 0.221~mag) because the color-to-dust decomposition is
+uncertain --- the correction adds the variance of
+$(\mathrm{bias} - \mathrm{E}[\mathrm{bias} \mid c, M])$ to each
+residual. After conversion to velocities through the Jacobian
+$J(z)$, the kurtosis actually \emph{increases} (from 2.9 to 3.7)
+because the added noise amplifies the tails in velocity space.
+
+\begin{table}
+\centering
+\caption{Effect of the P23 forward model correction on the Hubble
+residual and velocity distributions (1408 SNe, analytical mock
+with $S_\mathrm{P23}$ scatter).}
+\label{tab:fwd_correction}
+\begin{tabular}{lccc}
+\toprule
+& No correction & With forward model & Change \\
+\midrule
+\multicolumn{4}{l}{\emph{Hubble residuals $\Delta\mu$}} \\
+\quad $\sigma(\Delta\mu)$ [mag] & 0.203 & 0.221 & $+9\%$ \\
+\quad Skewness & $+0.58$ & $-0.24$ & flipped \\
+\quad Excess kurtosis & 2.06 & 1.74 & $-16\%$ \\
+\midrule
+\multicolumn{4}{l}{\emph{Estimated velocities}} \\
+\quad $\sigma(v)$ [km/s] & 2258 & 2483 & $+10\%$ \\
+\quad Skewness & $-0.46$ & $+0.35$ & flipped \\
+\quad Excess kurtosis & 2.94 & 3.74 & $+27\%$ \\
+\midrule
+\multicolumn{4}{l}{\emph{$f\sigma_8$ fitting score}} \\
+\quad Score (lower = better) & 0.90 & 0.97 & $+8\%$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The lesson is that correcting the \emph{mean} bias per SN (which
+is what both BBC and the forward model do) is counterproductive
+for the velocity likelihood, because:
+(i)~the global mean is already absorbed by $M_0$;
+(ii)~the per-SN correction introduces additional scatter from the
+uncertain dust decomposition; and
+(iii)~the velocity Jacobian $J(z)$ is negative, so the skewness
+flips sign when converting from $\Delta\mu$ to $v$, meaning the
+forward model overcorrects in velocity space even when it
+correctly reduces $\Delta\mu$ skewness. The Student-$t$ sidesteps
+all three issues by leaving the data untouched and adjusting the
+statistical model instead.
+
 \begin{figure*}
 \centering
 \includegraphics[width=\textwidth]{fig_bbc_vs_studentt.pdf}
