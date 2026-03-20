@@ -665,12 +665,16 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
         fs8 = np.exp(ln_fsigma8)
         return 0.5 * ((fs8 - fsigma8_prior) / sigma_prior) ** 2
 
-    # Fit (fsigma8, sigma_v) at the data-driven nu with cosmological prior
+    # Fit (fsigma8, sigma_v, nu) jointly with cosmological prior.
+    # Jointly fitting nu (degrees of freedom) lets the data determine
+    # the optimal heavy-tailedness, which can give better point estimates
+    # than fixing nu from the kurtosis.
     if sigma_u_fixed is not None:
-        def cost(ln_fsigma8, sigma_v):
+        def cost(ln_fsigma8, sigma_v, ln_nu):
             fsigma8 = np.exp(ln_fsigma8)
+            nu = np.exp(ln_nu)
             nll = neg_log_likelihood(
-                [fsigma8, sigma_v, nu_data], velocities, positions, C_obs,
+                [fsigma8, sigma_v, nu], velocities, positions, C_obs,
                 cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=sigma_u_fixed
             )
@@ -681,9 +685,11 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
         best_fval = np.inf
         for ln_start in [np.log(0.15), np.log(0.4), np.log(0.8)]:
             for sv_start in [100.0, 300.0]:
-                m = Minuit(cost, ln_fsigma8=ln_start, sigma_v=sv_start)
+                m = Minuit(cost, ln_fsigma8=ln_start, sigma_v=sv_start,
+                           ln_nu=np.log(nu_data))
                 m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
                 m.limits['sigma_v'] = (1.0, 1000.0)
+                m.limits['ln_nu'] = (np.log(2.5), np.log(500.0))
                 m.errordef = Minuit.LIKELIHOOD
                 m.print_level = 0
                 m.migrad()
@@ -692,19 +698,22 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
                     best_m = m
         m = best_m
     else:
-        def cost(ln_fsigma8, sigma_v, sigma_u):
+        def cost(ln_fsigma8, sigma_v, sigma_u, ln_nu):
             fsigma8 = np.exp(ln_fsigma8)
+            nu = np.exp(ln_nu)
             nll = neg_log_likelihood(
-                [fsigma8, sigma_v, sigma_u, nu_data], velocities, positions,
+                [fsigma8, sigma_v, sigma_u, nu], velocities, positions,
                 C_obs, cosmo_params, cov_cache=cov_cache,
                 sigma_u_fixed=None
             )
             return nll + _prior_penalty(ln_fsigma8)
 
-        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0)
+        m = Minuit(cost, ln_fsigma8=np.log(0.4), sigma_v=150.0, sigma_u=21.0,
+                   ln_nu=np.log(nu_data))
         m.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
         m.limits['sigma_v'] = (1.0, 1000.0)
         m.limits['sigma_u'] = (1.0, 100.0)
+        m.limits['ln_nu'] = (np.log(2.5), np.log(500.0))
         m.errordef = Minuit.LIKELIHOOD
         m.print_level = 0
         m.migrad()
@@ -718,10 +727,41 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     sigma_u_fit = (sigma_u_fixed if sigma_u_fixed is not None
                    else m.values['sigma_u'])
 
-    # CI from the posterior Hesse (data + prior combined).
-    # The prior tightens the CIs appropriately: it adds Fisher information
-    # from the cosmological constraint, which is principled.
-    sigma_ln = m.errors['ln_fsigma8']
+    # CIs: Compute Gaussian Hesse at the Student-t MLE for tighter,
+    # better-calibrated intervals. The Student-t MLE gives an unbiased
+    # point estimate, but the Student-t Hesse overestimates CI width
+    # because the log-likelihood has shallower curvature (outlier
+    # downweighting). The Gaussian Hesse at the same point gives the
+    # Fisher information appropriate for coverage calibration.
+    if sigma_u_fixed is not None:
+        def gauss_cost_ci(ln_fsigma8, sigma_v):
+            fs8 = np.exp(ln_fsigma8)
+            nll = _gaussian_nll(
+                [fs8, sigma_v], velocities, positions, C_obs,
+                cosmo_params, cov_cache=cov_cache,
+                sigma_u_fixed=sigma_u_fixed
+            )
+            return nll + _prior_penalty(ln_fsigma8)
+    else:
+        su_fit = m.values['sigma_u']
+        def gauss_cost_ci(ln_fsigma8, sigma_v):
+            fs8 = np.exp(ln_fsigma8)
+            nll = _gaussian_nll(
+                [fs8, sigma_v, su_fit], velocities, positions, C_obs,
+                cosmo_params, cov_cache=cov_cache,
+                sigma_u_fixed=None
+            )
+            return nll + _prior_penalty(ln_fsigma8)
+
+    m_ci = Minuit(gauss_cost_ci, ln_fsigma8=ln_fs8_fit,
+                  sigma_v=sigma_v_fit)
+    m_ci.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
+    m_ci.limits['sigma_v'] = (1.0, 1000.0)
+    m_ci.errordef = Minuit.LIKELIHOOD
+    m_ci.print_level = 0
+    m_ci.hesse()
+
+    sigma_ln = m_ci.errors['ln_fsigma8']
     sigma_fsigma8 = fsigma8_fit * sigma_ln
 
     # 68% CI via log-space (asymmetric in linear space)
