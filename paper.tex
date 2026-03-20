@@ -476,18 +476,24 @@ velocities. This is a limitation of the Eisenstein-Hu power
 spectrum approximation; using CAMB or CLASS, or calibrating the
 power spectrum from the simulation, would reduce this bias.
 
-\subsection{Why BBC corrections did not help}
+\subsection{BBC makes P23 worse, not better}
 
-We attempted several bias correction strategies: (i)~self-calibrating
-bin means in color--mass bins, (ii)~analytical P23 corrections,
-(iii)~split-$\beta$ Tripp refitting, and (iv)~color-dependent
-uncertainty inflation. All increased the bias or degraded
-constraints. The fundamental issue is that BBC corrects the
-\emph{mean} bias per bin, while the $f\sigma_8$ bias arises from
-the \emph{shape} (skewness, kurtosis) of the velocity distribution.
-Correcting the mean does not Gaussianize the within-bin
-distribution. Additionally, corrections risk removing real velocity
-signal through color--redshift correlations in the P23 model.
+C25 found that BBC \emph{increases} the P23 bias from $-20\%$
+(simple fit) to $-26\%$ (BBC fit). We reproduce this result on
+our SNANA simulations: with 2125 SALT3-fitted low-$z$ P23 SNe,
+the Gaussian bias goes from $-98\%$ (no BBC, boundary hit) to
+$-28\%$ (with BBC) --- confirming that BBC partially helps the
+Gaussian. But the Student-$t$ without BBC gives $+14\%$, which
+is \emph{better} than Gaussian + BBC. Adding BBC to the
+Student-$t$ \emph{worsens} the result to $+25\%$.
+
+The reason: BBC corrections are functions of $(z, c, x_1)$, and
+in the P23 model, the dust parameter $\tau$ depends on redshift.
+This creates a color--redshift correlation through which BBC
+inadvertently subtracts real velocity signal along with the
+standardization bias. The Student-$t$ avoids this problem
+entirely because it modifies the \emph{likelihood}, not the
+\emph{data}.
 
 \subsection{Caveats}
 
