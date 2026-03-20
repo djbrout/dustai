@@ -563,16 +563,21 @@ and dust exponential). Subtracting this per-SN correction from
 $\Delta\mu$ should, in principle, remove the color-dependent bias
 and reduce the non-Gaussianity.
 
-Table~\ref{tab:fwd_correction} shows what actually happens: the
-forward model correction \emph{flips} the skewness from $+0.58$
-to $-0.24$, overcorrecting the asymmetry. More importantly, it
-\emph{increases} the residual scatter by $\sim\!9\%$ (from 0.203
-to 0.221~mag) because the color-to-dust decomposition is
-uncertain --- the correction adds the variance of
+Table~\ref{tab:fwd_correction} shows what actually happens on one
+representative mock (seed 1000, 1408 SNe). The forward model
+correction reduces the $\Delta\mu$ kurtosis from 2.1 to 1.7 and
+flips the skewness from $+0.58$ to $-0.24$, overcorrecting the
+asymmetry. However, it \emph{increases} the residual scatter by
+$\sim\!9\%$ (from 0.203 to 0.221~mag) because the
+color-to-dust decomposition is uncertain --- the correction adds
+the variance of
 $(\mathrm{bias} - \mathrm{E}[\mathrm{bias} \mid c, M])$ to each
-residual. After conversion to velocities through the Jacobian
-$J(z)$, the kurtosis actually \emph{increases} (from 2.9 to 3.7)
-because the added noise amplifies the tails in velocity space.
+residual. The effect on velocity kurtosis is mixed across mocks:
+the added noise sometimes outweighs the kurtosis reduction
+(+27\% for seed 1000), and sometimes does not ($-41\%$ for
+seed 1411). The net effect on the $f\sigma_8$ score is negative
+(+8\% worse) because the increased scatter widens the confidence
+intervals.
 
 \begin{table}
 \centering
@@ -601,17 +606,17 @@ with $S_\mathrm{P23}$ scatter).}
 \end{table}
 
 The lesson is that correcting the \emph{mean} bias per SN (which
-is what both BBC and the forward model do) is counterproductive
-for the velocity likelihood, because:
+is what both BBC and the forward model do) is not sufficient for
+the velocity likelihood, because:
 (i)~the global mean is already absorbed by $M_0$;
 (ii)~the per-SN correction introduces additional scatter from the
-uncertain dust decomposition; and
-(iii)~the velocity Jacobian $J(z)$ is negative, so the skewness
-flips sign when converting from $\Delta\mu$ to $v$, meaning the
-forward model overcorrects in velocity space even when it
-correctly reduces $\Delta\mu$ skewness. The Student-$t$ sidesteps
-all three issues by leaving the data untouched and adjusting the
-statistical model instead.
+uncertain dust decomposition ($+9\%$ in $\sigma_{\Delta\mu}$);
+and (iii)~while the $\Delta\mu$ kurtosis consistently decreases,
+the added noise can increase the velocity kurtosis depending on
+the realization, and the wider residual distribution inflates the
+confidence intervals. The Student-$t$ sidesteps these issues by
+leaving the data untouched and adjusting the statistical model
+instead.
 
 \begin{figure*}
 \centering
