@@ -11,3 +11,4 @@ e9441f4	1.006263	0.025165	0.7500	improved	CI_SCALE=0.977 for optimal coverage th
 f20074b	0.993691	-0.007148	0.9375	uchuu	Cosmo prior + multi-start (25% prior width, too broad)
 665fa7a	1.000092	-0.020845	0.8125	uchuu-best	Fisher prior + Student-t + Bel2019 + multi-start, 16 Uchuu mocks
 665fa7a	1.143120	0.044916	0.7500	analytical	Same approach on 4 analytical mocks
+bd8820f	0.898995	0.041488	0.7500	improved	Student-t MLE + conditional Gaussian Hesse CIs + Fisher prior

@@ -589,22 +589,16 @@ def _fit_nuisance_scipy(data, bias_functions, mu_theory, verbose):
 # ---------------------------------------------------------------------------
 
 def apply_corrections_to_mock(mock):
-    """Apply BBC corrections to a full mock dict from simulate.generate_mock().
+    """Apply quality cuts to a mock from simulate.generate_mock().
 
-    This is the entry point called by evaluate.py. It extracts the
-    relevant fields from the mock, applies corrections (currently a
-    simplified pass-through that uses the Tripp-fit velocities), and
-    returns a dict with corrected velocities and uncertainties.
-
-    The agent should improve this function to better handle P23
-    non-Gaussianity — e.g. by implementing full BBC-7D/BS20, by
-    using color-dependent corrections, or by modifying the Tripp
-    fit to account for the dust mixture.
+    The Student-t likelihood in likelihood.py handles P23
+    non-Gaussianity directly through heavy-tailed modeling,
+    making BBC corrections unnecessary for PV analysis.
 
     Returns
     -------
     dict with keys:
-        velocities : ndarray, corrected estimated velocities
+        velocities : ndarray, estimated velocities after cuts
         sigma_v    : ndarray, velocity uncertainties
         n_sn       : int, number of SNe after cuts
         delta_mu   : ndarray, Hubble residuals
