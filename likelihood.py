@@ -658,7 +658,7 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     except np.linalg.LinAlgError:
         sigma_prior = 0.15 * fsigma8_prior  # fallback
     # Ensure reasonable bounds
-    sigma_prior = np.clip(sigma_prior, 0.05 * fsigma8_prior, 0.30 * fsigma8_prior)
+    sigma_prior = np.clip(sigma_prior, 0.05 * fsigma8_prior, 0.25 * fsigma8_prior)
 
     def _prior_penalty(ln_fsigma8):
         """Gaussian prior on fsigma8 from input cosmology."""
