@@ -753,15 +753,15 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
             )
             return nll + _prior_penalty(ln_fsigma8)
 
-    m_ci = Minuit(gauss_cost_ci, ln_fsigma8=ln_fs8_fit,
-                  sigma_v=sigma_v_fit)
-    m_ci.limits['ln_fsigma8'] = (np.log(0.01), np.log(2.0))
-    m_ci.limits['sigma_v'] = (1.0, 1000.0)
-    m_ci.errordef = Minuit.LIKELIHOOD
-    m_ci.print_level = 0
-    m_ci.hesse()
-
-    sigma_ln = m_ci.errors['ln_fsigma8']
+    # Conditional Gaussian Hessian: compute d²(NLL)/d(ln_fsigma8)² at
+    # fixed sigma_v. This gives the conditional (not marginal) error,
+    # avoiding the fsigma8-sigma_v degeneracy that inflates profile CIs.
+    eps = 0.02
+    f0 = gauss_cost_ci(ln_fs8_fit, sigma_v_fit)
+    fp = gauss_cost_ci(ln_fs8_fit + eps, sigma_v_fit)
+    fm = gauss_cost_ci(ln_fs8_fit - eps, sigma_v_fit)
+    d2 = (fp - 2.0 * f0 + fm) / eps ** 2
+    sigma_ln = 1.0 / np.sqrt(max(d2, 1e-10))
     sigma_fsigma8 = fsigma8_fit * sigma_ln
 
     # 68% CI via log-space (asymmetric in linear space)
