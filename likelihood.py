@@ -438,9 +438,21 @@ def _build_total_covariance(fsigma8, sigma_v, sigma_u, positions, C_obs,
     try:
         L_chol = np.linalg.cholesky(C_total)
     except np.linalg.LinAlgError:
-        ridge = 1e-4 * np.trace(C_total) / N
-        C_total += ridge * np.eye(N)
-        L_chol = np.linalg.cholesky(C_total)
+        # Progressively increase ridge until Cholesky succeeds
+        for ridge_scale in [1e-4, 1e-3, 1e-2, 1e-1]:
+            ridge = ridge_scale * np.trace(C_total) / N
+            try:
+                L_chol = np.linalg.cholesky(C_total + ridge * np.eye(N))
+                C_total += ridge * np.eye(N)
+                break
+            except np.linalg.LinAlgError:
+                continue
+        else:
+            # Last resort: eigendecomposition
+            eigvals, eigvecs = np.linalg.eigh(C_total)
+            eigvals = np.maximum(eigvals, 1.0)
+            C_total = eigvecs @ np.diag(eigvals) @ eigvecs.T
+            L_chol = np.linalg.cholesky(C_total)
 
     log_det = 2.0 * np.sum(np.log(np.diag(L_chol)))
     return L_chol, log_det, N
