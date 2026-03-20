@@ -17,3 +17,4 @@ a092323	0.729100	0.027900	0.7500	uchuu-1500	Uchuu N-body, 8 mocks x 1500 SNe, St
 97b173d	0.601900	0.002500	0.7500	uchuu-1500	Uchuu + Jensen correction, 8 mocks x 1500 SNe
 e6b9516	0.589422	0.001155	0.7500	improved	30% prior clip + Jensen + Student-t + Gaussian Hesse
 e6b9516	0.568200	0.006200	0.7500	uchuu-1500	Uchuu + 30% prior clip + Jensen, 8x1500 SNe
+970cc94	0.538653	0.000085	0.7500	improved	25% prior clip + Jensen + Student-t + Gaussian Hesse
