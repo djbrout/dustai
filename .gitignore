@@ -1,20 +1,20 @@
-# Python-generated files
+# Large data files (download separately)
+uchuu/*.h5
+uchuu/*.npz
+snana_sims/output_lowz/
+snana_sims/FIT_DUSTAI_LOWZ.FITRES.TEXT
+snana_sims/*.log
+
+# Python cache
 __pycache__/
-*.py[oc]
-build/
-dist/
-wheels/
-*.egg-info
+*.pyc
 
-# Virtual environments
-.venv
-worktrees/
-results/
-queue/
+# LaTeX build
+*.aux
+*.log
+*.out
+*.bbl
+*.blg
 
-# Agent prompt files (generated per-session by launchers)
-CLAUDE.md
-AGENTS.md
-
-# Experimental code/artifacts
-dev/
+# Logs
+*.log
