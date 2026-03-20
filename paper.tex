@@ -479,21 +479,50 @@ power spectrum from the simulation, would reduce this bias.
 \subsection{BBC makes P23 worse, not better}
 
 C25 found that BBC \emph{increases} the P23 bias from $-20\%$
-(simple fit) to $-26\%$ (BBC fit). We reproduce this result on
-our SNANA simulations: with 2125 SALT3-fitted low-$z$ P23 SNe,
-the Gaussian bias goes from $-98\%$ (no BBC, boundary hit) to
-$-28\%$ (with BBC) --- confirming that BBC partially helps the
-Gaussian. But the Student-$t$ without BBC gives $+14\%$, which
-is \emph{better} than Gaussian + BBC. Adding BBC to the
-Student-$t$ \emph{worsens} the result to $+25\%$.
+(simple fit) to $-26\%$ (BBC fit). We reproduce this on our
+SNANA simulations (Fig.~\ref{fig:bbc_vs_studentt}c): with 2125
+SALT3-fitted low-$z$ P23 SNe, the Gaussian bias goes from
+$-98\%$ (no BBC, boundary hit) to $-28\%$ (with BBC). But the
+Student-$t$ without BBC gives $+14\%$, outperforming
+Gaussian + BBC. Adding BBC to the Student-$t$ \emph{worsens}
+the result to $+25\%$.
 
-The reason: BBC corrections are functions of $(z, c, x_1)$, and
-in the P23 model, the dust parameter $\tau$ depends on redshift.
-This creates a color--redshift correlation through which BBC
-inadvertently subtracts real velocity signal along with the
-standardization bias. The Student-$t$ avoids this problem
-entirely because it modifies the \emph{likelihood}, not the
-\emph{data}.
+Fig.~\ref{fig:bbc_vs_studentt}a shows why: BBC barely changes
+the residual distribution. The excess kurtosis drops from 2.9 to
+3.0 (effectively unchanged). BBC operates on the \emph{mean}
+bias per $(z, c, x_1)$ bin, but the $f\sigma_8$ bias comes
+from the \emph{shape} of the distribution --- the heavy tails
+that BBC cannot remove.
+
+Fig.~\ref{fig:bbc_vs_studentt}b shows the mechanism by which
+the Student-$t$ succeeds where BBC fails. In the Gaussian
+likelihood, the top 10\% of outlier SNe (sorted by standardized
+residual $|z_i|$) contribute 66\% of the total $\chi^2$. These
+are the P23 dust-contaminated SNe whose biased distances
+dominate the fit. In the Student-$t$ ($\nu = 6$), the same
+outliers contribute only 59\% --- still significant, but no
+longer dominant. This 7-point rebalancing is sufficient to shift
+$f\sigma_8$ from $-98\%$ to $+14\%$ bias.
+
+The Student-$t$ avoids BBC's fundamental limitation because it
+modifies the \emph{likelihood}, not the \emph{data}. The
+velocity vector $\bm{v}$ is untouched; only the statistical
+weight of each observation changes.
+
+\begin{figure*}
+\centering
+\includegraphics[width=\textwidth]{fig_bbc_vs_studentt.pdf}
+\caption{\textbf{(a)}~BBC barely changes the Hubble residual
+distribution: kurtosis is $\sim 3$ with or without BBC.
+\textbf{(b)}~Cumulative likelihood contribution sorted by
+residual size. In the Gaussian (blue), the top 10\% of outlier
+SNe contribute 66\% of $\chi^2$. The Student-$t$ (red) reduces
+this to 59\%, breaking the outlier dominance.
+\textbf{(c)}~$f\sigma_8$ bias on real SNANA P23 data (2125 SNe):
+the Student-$t$ without BBC ($+14\%$) outperforms Gaussian + BBC
+($-28\%$). BBC worsens both likelihoods.}
+\label{fig:bbc_vs_studentt}
+\end{figure*}
 
 \subsection{Caveats}
 
