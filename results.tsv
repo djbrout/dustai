@@ -15,3 +15,5 @@ bd8820f	0.898995	0.041488	0.7500	improved	Student-t MLE + conditional Gaussian H
 a092323	0.729100	0.027900	0.7500	uchuu-1500	Uchuu N-body, 8 mocks x 1500 SNe, Student-t + Gaussian CI
 97b173d	0.710279	0.003745	0.7500	improved	Jensen correction + Student-t + cond. Gaussian Hesse
 97b173d	0.601900	0.002500	0.7500	uchuu-1500	Uchuu + Jensen correction, 8 mocks x 1500 SNe
+e6b9516	0.589422	0.001155	0.7500	improved	30% prior clip + Jensen + Student-t + Gaussian Hesse
+e6b9516	0.568200	0.006200	0.7500	uchuu-1500	Uchuu + 30% prior clip + Jensen, 8x1500 SNe
