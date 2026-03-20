@@ -460,11 +460,39 @@ produces Hubble residuals with skewness $\sim 1$ and excess
 kurtosis $\sim 5$--22.
 
 \textbf{Step 4:} The Tripp $M_0$ absorbs the global mean of the
-residuals, neutralizing the skewness. We verified this: a forward
-model that explicitly corrects the per-SN skewness (via dust
-marginalization) reduces skewness from 0.8 to 0.04 but does
-\emph{not} improve $f\sigma_8$ ($-2.2\% \to -2.8\%$). The
-skewness is harmless because $M_0$ already handles it.
+residuals, neutralizing the skewness. We verified this directly
+on 6600 SALT3-fitted P23 SNe from our SNANA simulation
+(Table~\ref{tab:skew_vs_kurt}): a forward model that
+marginalizes over $E_\mathrm{dust}$ per SN using the known P23
+priors almost perfectly removes the skewness ($0.82 \to 0.04$)
+while barely touching the kurtosis ($22.5 \to 21.6$, only
+$-4\%$). The effect on $f\sigma_8$ is \emph{zero}: the
+Student-$t$ gives $-15.0\%$ bias with or without the forward
+model. The Gaussian improves by only 3.5~percentage points
+($-77.8\% \to -74.3\%$). Skewness is irrelevant because $M_0$
+already absorbs it; kurtosis is everything.
+
+\begin{table}
+\centering
+\caption{Skewness vs.\ kurtosis: the smoking gun. A P23 forward
+model that marginalizes $E_\mathrm{dust}$ per SN nearly
+eliminates skewness but leaves kurtosis unchanged. The
+$f\sigma_8$ bias is insensitive to the skewness correction,
+proving that kurtosis --- not skewness --- drives the bias.
+Data: 6600 SALT3-fitted P23 SNe from SNANA.}
+\label{tab:skew_vs_kurt}
+\begin{tabular}{lcccc}
+\toprule
+& Skewness & Kurtosis & \multicolumn{2}{c}{$f\sigma_8$ bias} \\
+& $(\Delta\mu)$ & $(\Delta\mu)$ & Gaussian & Student-$t$ \\
+\midrule
+No correction & $+0.82$ & 22.5 & $-77.8\%$ & $-15.0\%$ \\
+Forward model & $+0.04$ & 21.6 & $-74.3\%$ & $-15.0\%$ \\
+\midrule
+Change & $-95\%$ & $-4\%$ & $-3.5$ pp & $0.0$ pp \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \textbf{Step 5:} The $f\sigma_8$ likelihood uses
 $\chi^2 = \bm{v}^T\bm{C}^{-1}\bm{v}$, a sum of \emph{squared}
