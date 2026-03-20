@@ -563,60 +563,60 @@ and dust exponential). Subtracting this per-SN correction from
 $\Delta\mu$ should, in principle, remove the color-dependent bias
 and reduce the non-Gaussianity.
 
-Table~\ref{tab:fwd_correction} shows what actually happens on one
-representative mock (seed 1000, 1408 SNe). The forward model
-correction reduces the $\Delta\mu$ kurtosis from 2.1 to 1.7 and
-flips the skewness from $+0.58$ to $-0.24$, overcorrecting the
-asymmetry. However, it \emph{increases} the residual scatter by
-$\sim\!9\%$ (from 0.203 to 0.221~mag) because the
+We tested this on 16 analytical mocks (1500~SNe each) and
+Table~\ref{tab:fwd_correction} shows the results. The forward
+model correction \emph{always} reduces the $\Delta\mu$ skewness
+(from $+0.52 \pm 0.16$ to $-0.15 \pm 0.12$), flipping the sign
+in 14/16 mocks and overcorrecting the asymmetry. It \emph{always}
+increases the residual scatter by $\sim\!7\%$ (from
+$0.206 \pm 0.006$ to $0.220 \pm 0.006$~mag) because the
 color-to-dust decomposition is uncertain --- the correction adds
 the variance of
 $(\mathrm{bias} - \mathrm{E}[\mathrm{bias} \mid c, M])$ to each
-residual. The effect on velocity kurtosis is mixed across mocks:
-the added noise sometimes outweighs the kurtosis reduction
-(+27\% for seed 1000), and sometimes does not ($-41\%$ for
-seed 1411). The net effect on the $f\sigma_8$ score is negative
-(+8\% worse) because the increased scatter widens the confidence
-intervals.
+residual. However, the effect on kurtosis is \emph{mixed}: the
+$\Delta\mu$ kurtosis decreases in only 9/16 mocks, and the
+velocity kurtosis likewise in 9/16 mocks (though its mean drops
+from 2.9 to 2.5). The velocity scatter always increases
+($+6\%$), and the velocity skewness flips sign in 14/16 mocks
+(from negative to positive, since $J(z) < 0$ in our survey).
 
 \begin{table}
 \centering
-\caption{Effect of the P23 forward model correction on the Hubble
-residual and velocity distributions (1408 SNe, analytical mock
-with $S_\mathrm{P23}$ scatter).}
+\caption{Effect of the P23 forward model correction (16 analytical
+mocks, 1500~SNe each, $S_\mathrm{P23}$ scatter). Values show
+mean $\pm$ std across mocks; the ``Always?'' column indicates
+whether the change has the same sign in all 16 realizations.}
 \label{tab:fwd_correction}
-\begin{tabular}{lccc}
+\begin{tabular}{lccl}
 \toprule
-& No correction & With forward model & Change \\
+& No correction & With forward model & Always? \\
 \midrule
 \multicolumn{4}{l}{\emph{Hubble residuals $\Delta\mu$}} \\
-\quad $\sigma(\Delta\mu)$ [mag] & 0.203 & 0.221 & $+9\%$ \\
-\quad Skewness & $+0.58$ & $-0.24$ & flipped \\
-\quad Excess kurtosis & 2.06 & 1.74 & $-16\%$ \\
+$\sigma(\Delta\mu)$ [mag] & $0.206 \pm 0.006$ & $0.220 \pm 0.006$ & increases 16/16 \\
+Skewness & $+0.52 \pm 0.16$ & $-0.15 \pm 0.12$ & decreases 16/16 \\
+Excess kurtosis & $1.7 \pm 0.8$ & $1.4 \pm 0.4$ & mixed (9/16 $\downarrow$) \\
 \midrule
 \multicolumn{4}{l}{\emph{Estimated velocities}} \\
-\quad $\sigma(v)$ [km/s] & 2258 & 2483 & $+10\%$ \\
-\quad Skewness & $-0.46$ & $+0.35$ & flipped \\
-\quad Excess kurtosis & 2.94 & 3.74 & $+27\%$ \\
-\midrule
-\multicolumn{4}{l}{\emph{$f\sigma_8$ fitting score}} \\
-\quad Score (lower = better) & 0.90 & 0.97 & $+8\%$ \\
+$\sigma(v)$ [km/s] & $2317 \pm 71$ & $2463 \pm 70$ & increases 16/16 \\
+Skewness & $-0.56 \pm 0.25$ & $+0.18 \pm 0.20$ & increases 16/16 \\
+Excess kurtosis & $2.9 \pm 1.5$ & $2.5 \pm 0.9$ & mixed (9/16 $\downarrow$) \\
 \bottomrule
 \end{tabular}
 \end{table}
 
-The lesson is that correcting the \emph{mean} bias per SN (which
-is what both BBC and the forward model do) is not sufficient for
-the velocity likelihood, because:
+The net effect on $f\sigma_8$ fitting is negative: the score
+worsens by $\sim\!8\%$ because the increased scatter widens
+the confidence intervals even when the kurtosis decreases. The
+lesson is that correcting the \emph{mean} bias per SN is not
+sufficient for the velocity likelihood, because:
 (i)~the global mean is already absorbed by $M_0$;
 (ii)~the per-SN correction introduces additional scatter from the
-uncertain dust decomposition ($+9\%$ in $\sigma_{\Delta\mu}$);
-and (iii)~while the $\Delta\mu$ kurtosis consistently decreases,
-the added noise can increase the velocity kurtosis depending on
-the realization, and the wider residual distribution inflates the
-confidence intervals. The Student-$t$ sidesteps these issues by
-leaving the data untouched and adjusting the statistical model
-instead.
+uncertain dust decomposition ($+7\%$ in $\sigma_{\Delta\mu}$,
+always); and
+(iii)~the kurtosis reduction is inconsistent across realizations
+(only 9/16 mocks improve), while the scatter increase is
+universal. The Student-$t$ sidesteps these issues by leaving the
+data untouched and adjusting the statistical model instead.
 
 \begin{figure*}
 \centering
