@@ -13,3 +13,5 @@ f20074b	0.993691	-0.007148	0.9375	uchuu	Cosmo prior + multi-start (25% prior wid
 665fa7a	1.143120	0.044916	0.7500	analytical	Same approach on 4 analytical mocks
 bd8820f	0.898995	0.041488	0.7500	improved	Student-t MLE + conditional Gaussian Hesse CIs + Fisher prior
 a092323	0.729100	0.027900	0.7500	uchuu-1500	Uchuu N-body, 8 mocks x 1500 SNe, Student-t + Gaussian CI
+97b173d	0.710279	0.003745	0.7500	improved	Jensen correction + Student-t + cond. Gaussian Hesse
+97b173d	0.601900	0.002500	0.7500	uchuu-1500	Uchuu + Jensen correction, 8 mocks x 1500 SNe
