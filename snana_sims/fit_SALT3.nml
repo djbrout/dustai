@@ -1,0 +1,31 @@
+&SNLCINP
+  ! Generic SALT3 fit for dustai simulations
+  ! Usage: snlc_fit.exe fit_SALT3.nml
+  !   Set VERSION_PHOTOMETRY to the sim output name
+
+  VERSION_PHOTOMETRY = 'DUSTAI_SP23'
+  PRIVATE_DATA_PATH  = '/Volumes/External24TB/dustai/snana_sims/output'
+
+  KCOR_FILE = '$SNDATA_ROOT/kcor/LSST/baseline/kcor_LSST.fits.gz'
+
+  SNTABLE_LIST = 'FITRES'
+  TEXTFILE_PREFIX = 'FIT_DUSTAI'
+
+  OPT_MWEBV = 1
+
+  CUTWIN_SNRMAX = 5.0, 999.
+  CUTWIN_NFILT_SNRMAX = 2, 99
+  NFIT_ITERATION = 3
+  ABORT_ON_NOEPOCHS = F
+&END
+
+&FITINP
+  FITMODEL_NAME = 'SALT3.K21'
+  FILTLIST_FIT = 'griz'
+
+  FITWIN_TREST = -15.0, 45.0
+  FITWIN_PROB  =  0.01, 1.01
+
+  PRIOR_SHAPE_RANGE = -5.0, 5.0
+  PRIOR_MJDSIG = 10.0
+&END

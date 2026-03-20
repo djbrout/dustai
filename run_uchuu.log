@@ -1,0 +1,36 @@
+Loading Uchuu halos...
+  Loaded 32,013,971 halos in 11.5s
+
+Uchuu evaluation: 8 mocks, 6600 SNe each, model=P23
+Fiducial fsigma8 = 0.4276
+
+  Mock 1/8: fsigma8=0.4641 +/- 0.0656  [0.4029, 0.5346]  (1094.1s)
+  Mock 2/8: fsigma8=0.5410 +/- 0.0639  [0.4807, 0.6088]  (1290.2s)
+  Mock 3/8: fsigma8=0.4804 +/- 0.0634  [0.4210, 0.5481]  (998.0s)
+  Mock 4/8: fsigma8=0.4166 +/- 0.0605  [0.3603, 0.4818]  (1234.0s)
+  Mock 5/8: fsigma8=0.4535 +/- 0.0709  [0.3879, 0.5302]  (658.2s)
+  Mock 6/8: fsigma8=0.4531 +/- 0.0583  [0.3984, 0.5153]  (914.7s)
+  Mock 7/8: fsigma8=0.4983 +/- 0.0666  [0.4360, 0.5696]  (866.5s)
+  Mock 8/8: fsigma8=0.3850 +/- 0.0740  [0.3177, 0.4666]  (1655.5s)
+
+---
+final_score:      0.843518
+bias:             0.079301
+abs_bias:         0.079301
+coverage_68:      0.7500
+mean_width_rel:   0.3070
+mean_fsigma8:     0.461508
+std_fsigma8:      0.044768
+fsigma8_fid:      0.427599
+n_mocks:          8
+total_seconds:    8711.2
+
+Per-mock results:
+  seed= 2000  fsigma8=0.4641 [0.4029, 0.5346]  covers_fid=Y
+  seed= 2137  fsigma8=0.5410 [0.4807, 0.6088]  covers_fid=N
+  seed= 2274  fsigma8=0.4804 [0.4210, 0.5481]  covers_fid=Y
+  seed= 2411  fsigma8=0.4166 [0.3603, 0.4818]  covers_fid=Y
+  seed= 2548  fsigma8=0.4535 [0.3879, 0.5302]  covers_fid=Y
+  seed= 2685  fsigma8=0.4531 [0.3984, 0.5153]  covers_fid=Y
+  seed= 2822  fsigma8=0.4983 [0.4360, 0.5696]  covers_fid=N
+  seed= 2959  fsigma8=0.3850 [0.3177, 0.4666]  covers_fid=Y

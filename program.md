@@ -1,114 +1,272 @@
-# autoresearch
+# dustai — Fixing the fsigma8 Bias from P23 Non-Gaussianity
 
-This is an experiment to have the LLM do its own research.
+You are an autonomous research agent. Your task is to develop a
+likelihood function and/or BBC bias correction method that recovers
+unbiased fsigma8 measurements from Type Ia supernovae when the
+intrinsic scatter follows the realistic P23 dust model.
+
+## The Problem
+
+Carreres+2025 (arXiv:2505.13290, copy in this directory) showed that:
+
+1. The P23 dust model (Brout & Scolnic 2021, parameterized by
+   Popovic+2023) is the most realistic SN Ia intrinsic scatter model
+2. It produces **non-Gaussian Hubble diagram residuals** (skewness
+   ~0.3–0.5, excess kurtosis ~1.6)
+3. The standard Gaussian likelihood for fsigma8 gives a **~20–26%
+   bias** on fsigma8 as a consequence
+4. BBC partially corrects color-dependent biases but does NOT fix
+   the non-Gaussianity
+
+Your goal: **modify the likelihood and/or BBC to recover unbiased
+fsigma8 with calibrated uncertainties.**
+
+## What You Must Do
+
+The current baseline uses a Gaussian likelihood with no BBC
+corrections. It scores ~5.3 with ~60% bias on fsigma8.
+
+You need to do one or both of:
+
+1. **Implement BBC bias corrections** in `bbc.py` — the current
+   `apply_corrections_to_mock()` is a pass-through that applies
+   quality cuts but no actual bias corrections. Implement real BBC
+   (bin in z, c, x1, host mass; compute mean bias per bin; subtract).
+   This should reduce the non-Gaussianity somewhat and improve the
+   Tripp fit residuals.
+
+2. **Create a new likelihood** in `likelihood.py` that accounts for
+   the predicted P23 non-Gaussianity. The current Gaussian likelihood
+   (Eq. 41 of the paper) assumes velocities are multivariate Gaussian.
+   They are not under P23 — the Hubble residuals have skewness ~1.3
+   and excess kurtosis ~7.6 (before BBC). You need a likelihood that
+   handles this.
+
+The P23 non-Gaussianity has a known, predictable form: it comes from
+the exponential dust distribution E_dust ~ Exp(τ) convolved with the
+Gaussian intrinsic color. The resulting color distribution has a
+positive tail, which after Tripp standardization produces positively
+skewed Hubble residuals. Your likelihood or BBC should use this
+knowledge.
+
+**Key insight**: the non-Gaussianity is NOT random — it is predicted
+by the P23 dust model parameters (R_V, E_dust distributions). A good
+solution will use the P23 model to predict the shape of the residual
+distribution and account for it, rather than just using a generic
+heavy-tailed distribution.
+
+## Goal
+
+Minimise `final_score` (lower is better) from `evaluate.py`.
+
+The score penalizes:
+- **Bias** (weight 5.0): |mean(fsigma8) / fsigma8_fid - 1|
+- **Coverage** (weight 2.0): |coverage_68 - 0.68| — are 68% CIs
+  calibrated?
+- **Width** (weight 1.0): mean interval width / fsigma8_fid — don't
+  just make huge error bars
+
+---
 
 ## Setup
 
-To set up a new experiment, work with the user to:
+1. **Agree on a run tag** (e.g. `mar18`). Branch: `dustai/<tag>`
+2. **Create the branch**: `git checkout -b dustai/<tag>`
+3. **Read the in-scope files**:
+   - This file (`program.md`)
+   - `likelihood.py` — fsigma8 likelihood (**editable**)
+   - `bbc.py` — BBC bias corrections (**editable**)
+   - `evaluate.py` — scoring harness (read-only)
+   - `simulate.py` — mock data generator (read-only)
+   - `2505.13290v2.pdf` — the paper (read-only)
+4. **Initialise results.tsv** with the header row.
+5. **Confirm and go.**
 
-1. **Agree on a run tag**: propose a tag based on today's date (e.g. `mar5`). The branch `autoresearch/<tag>` must not already exist — this is a fresh run.
-2. **Create the branch**: `git checkout -b autoresearch/<tag>` from current master.
-3. **Read the in-scope files**: The repo is small. Read these files for full context:
-   - `README.md` — repository context.
-   - `prepare.py` — fixed constants, data prep, tokenizer, dataloader, evaluation. Do not modify.
-   - `train.py` — the file you modify. Model architecture, optimizer, training loop.
-4. **Verify data exists**: Check that `~/.cache/autoresearch/` contains data shards and a tokenizer. If not, tell the human to run `uv run prepare.py`.
-5. **Initialize results.tsv**: Create `results.tsv` with just the header row. The baseline will be recorded after the first run.
-6. **Confirm and go**: Confirm setup looks good.
-
-Once you get confirmation, kick off the experimentation.
-
-## Experimentation
-
-Each experiment runs on a single GPU. The training script runs for a **fixed time budget of 5 minutes** (wall clock training time, excluding startup/compilation). You launch it simply as: `uv run train.py`.
-
-**What you CAN do:**
-- Modify `train.py` — this is the only file you edit. Everything is fair game: model architecture, optimizer, hyperparameters, training loop, batch size, model size, etc.
-
-**What you CANNOT do:**
-- Modify `prepare.py`. It is read-only. It contains the fixed evaluation, data loading, tokenizer, and training constants (time budget, sequence length, etc).
-- Install new packages or add dependencies. You can only use what's already in `pyproject.toml`.
-- Modify the evaluation harness. The `evaluate_bpb` function in `prepare.py` is the ground truth metric.
-
-**The goal is simple: get the lowest val_bpb.** Since the time budget is fixed, you don't need to worry about training time — it's always 5 minutes. Everything is fair game: change the architecture, the optimizer, the hyperparameters, the batch size, the model size. The only constraint is that the code runs without crashing and finishes within the time budget.
-
-**VRAM** is a soft constraint. Some increase is acceptable for meaningful val_bpb gains, but it should not blow up dramatically.
-
-**Simplicity criterion**: All else being equal, simpler is better. A small improvement that adds ugly complexity is not worth it. Conversely, removing something and getting equal or better results is a great outcome — that's a simplification win. When evaluating whether to keep a change, weigh the complexity cost against the improvement magnitude. A 0.001 val_bpb improvement that adds 20 lines of hacky code? Probably not worth it. A 0.001 val_bpb improvement from deleting code? Definitely keep. An improvement of ~0 but much simpler code? Keep.
-
-**The first run**: Your very first run should always be to establish the baseline, so you will run the training script as is.
-
-## Output format
-
-Once the script finishes it prints a summary like this:
-
-```
 ---
-val_bpb:          0.997900
-training_seconds: 300.1
-total_seconds:    325.9
-peak_vram_mb:     45060.2
-mfu_percent:      39.80
-total_tokens_M:   499.6
-num_steps:        953
-num_params_M:     50.3
-depth:            8
+
+## Physics Background
+
+### Peculiar velocities and fsigma8
+
+Observed redshift = cosmological redshift + peculiar velocity:
+  1 + z_obs = (1 + z_cos)(1 + z_p)
+
+Peculiar velocities trace the matter density field. The growth rate
+fsigma8 = f(z) * sigma8(z) sets the amplitude of the velocity
+power spectrum. By measuring SN Ia distances and comparing to
+redshifts, we can infer peculiar velocities and constrain fsigma8.
+
+### The Gaussian likelihood (current, biased)
+
+  L = (2π)^(-n/2) |C|^(-1/2) exp(-1/2 v^T C^{-1} v)
+
+where v = estimated velocities, C = C^vv(fsigma8) + C^obs + σ_v² I
+
+This assumes v is multivariate Gaussian. When P23 scatter makes the
+Hubble residuals (and therefore velocities) non-Gaussian, this
+likelihood is misspecified → biased fsigma8.
+
+### Why P23 produces non-Gaussianity
+
+The BS21/P23 model decomposes SN color into:
+- Intrinsic: c_int ~ N(-0.07, 0.05), β ~ N(2.07, 0.22)
+- Dust: (R_V + 1) * E_dust, where E_dust ~ Exp(τ)
+
+The exponential dust distribution creates a **positive tail** in
+the color distribution. When the standard Tripp formula fits a
+single β to this mixture, the residuals are skewed. BBC partially
+corrects the mean bias in color bins but doesn't fix the shape.
+
+### Key equations (from the paper)
+
+Velocity covariance (Eq. 35):
+  C^vv_ij = H0²/(2π²) * (fsigma8/fsigma8_fid)² * ∫ P_θθ(k) D_u² W_ij dk
+
+Damping function (Eq. 39):
+  D_u(k) = sin(k*σ_u) / (k*σ_u)
+
+Hubble residual → velocity (Eq. 29-30):
+  v = J(z) * Δμ
+
+The P23 dust model parameters:
+  β_int ~ N(2.07, 0.22)
+  c_int ~ N(-0.07, 0.05)
+  R_V|M_host: N(1.66, 0.95) if log(M) > 10, N(3.25, 0.93) otherwise
+  E_dust|M_host,z ~ Exp(τ) with τ from Eq. 10 of the paper
+  Observed color: c = c_int + E_dust
+  Magnitude: includes (R_V + 1)*E_dust + β_int*c_int terms
+
+Tripp formula (Eq. 3):
+  M*_sim = M_b,fid - α*x1 + β*c + Δ_M(M_host, γ)
+
+BS21 modified Tripp (Eq. 6):
+  M*_sim = M_b,fid - α*x1 + β_sim*c_sim + (R_V + 1)*E_dust
+
+Mass step (Eq. 5):
+  Δ_M = -γ/2 if log(M) > 10, +γ/2 if log(M) < 10
+  γ = 0.05 mag
+
+---
+
+## Files you CAN edit
+
+### `likelihood.py`
+The fsigma8 likelihood function. Currently implements the Gaussian
+likelihood (Eq. 41). Key function: `fit_fsigma8(...)`.
+
+### `bbc.py`
+The BBC bias correction code. Currently implements simplified BBC.
+Key function: `apply_corrections(...)`.
+
+## Files you CANNOT edit
+
+- `evaluate.py` — the scoring harness
+- `simulate.py` — the mock data generator
+
+---
+
+## Running an experiment
+
+```bash
+python3 evaluate.py > run.log 2>&1
 ```
 
-Note that the script is configured to always stop after 5 minutes, so depending on the computing platform of this computer the numbers might look different. You can extract the key metric from the log file:
+Extract key metrics:
+```bash
+grep "^final_score:\|^bias:\|^coverage_68:" run.log
+```
 
-```
-grep "^val_bpb:" run.log
-```
+---
 
 ## Logging results
 
-When an experiment is done, log it to `results.tsv` (tab-separated, NOT comma-separated — commas break in descriptions).
-
-The TSV has a header row and 5 columns:
+Tab-separated `results.tsv`:
 
 ```
-commit	val_bpb	memory_gb	status	description
+commit	final_score	bias	coverage_68	status	description
 ```
 
-1. git commit hash (short, 7 chars)
-2. val_bpb achieved (e.g. 1.234567) — use 0.000000 for crashes
-3. peak memory in GB, round to .1f (e.g. 12.3 — divide peak_vram_mb by 1024) — use 0.0 for crashes
-4. status: `keep`, `discard`, or `crash`
-5. short text description of what this experiment tried
-
-Example:
-
-```
-commit	val_bpb	memory_gb	status	description
-a1b2c3d	0.997900	44.0	keep	baseline
-b2c3d4e	0.993200	44.2	keep	increase LR to 0.04
-c3d4e5f	1.005000	44.0	discard	switch to GeLU activation
-d4e5f6g	0.000000	0.0	crash	double model width (OOM)
-```
+---
 
 ## The experiment loop
 
-The experiment runs on a dedicated branch (e.g. `autoresearch/mar5` or `autoresearch/mar5-gpu0`).
-
 LOOP FOREVER:
 
-1. Look at the git state: the current branch/commit we're on
-2. Tune `train.py` with an experimental idea by directly hacking the code.
-3. git commit
-4. Run the experiment: `uv run train.py > run.log 2>&1` (redirect everything — do NOT use tee or let output flood your context)
-5. Read out the results: `grep "^val_bpb:\|^peak_vram_mb:" run.log`
-6. If the grep output is empty, the run crashed. Run `tail -n 50 run.log` to read the Python stack trace and attempt a fix. If you can't get things to work after more than a few attempts, give up.
-7. Record the results in the tsv
-8. If val_bpb improved (lower), you "advance" the branch, keeping the git commit
-9. If val_bpb is equal or worse, you git reset back to where you started
+1. Look at git state.
+2. Modify `likelihood.py` and/or `bbc.py`.
+3. `git commit`
+4. Run: `python3 evaluate.py > run.log 2>&1`
+5. Read results: `grep "^final_score:\|^bias:\|^coverage_68:" run.log`
+6. If crashed: `tail -n 50 run.log`, fix if trivial.
+7. Record in `results.tsv`.
+8. If `final_score` improved → keep.
+9. If equal or worse → `git reset` back.
 
-The idea is that you are a completely autonomous researcher trying things out. If they work, keep. If they don't, discard. And you're advancing the branch so that you can iterate. If you feel like you're getting stuck in some way, you can rewind but you should probably do this very very sparingly (if ever).
+**NEVER STOP.** The human may be asleep. You are autonomous.
 
-**Timeout**: Each experiment should take ~5 minutes total (+ a few seconds for startup and eval overhead). If a run exceeds 10 minutes, kill it and treat it as a failure (discard and revert).
+---
 
-**Crashes**: If a run crashes (OOM, or a bug, or etc.), use your judgment: If it's something dumb and easy to fix (e.g. a typo, a missing import), fix it and re-run. If the idea itself is fundamentally broken, just skip it, log "crash" as the status in the tsv, and move on.
+## Research Directions
 
-**NEVER STOP**: Once the experiment loop has begun (after the initial setup), do NOT pause to ask the human if you should continue. Do NOT ask "should I keep going?" or "is this a good stopping point?". The human might be asleep, or gone from a computer and expects you to continue working *indefinitely* until you are manually stopped. You are autonomous. If you run out of ideas, think harder — read papers referenced in the code, re-read the in-scope files for new angles, try combining previous near-misses, try more radical architectural changes. The loop runs until the human interrupts you, period.
+### Approach 1: Fix the likelihood
 
-As an example use case, a user might leave you running while they sleep. If each experiment takes you ~5 minutes then you can run approx 12/hour, for a total of about 100 over the duration of the average human sleep. The user then wakes up to experimental results, all completed by you while they slept!
+The Gaussian likelihood is wrong because velocities are non-Gaussian
+under P23. Ideas:
+
+- **Skew-normal**: Replace N(0,C) with a skew-normal. Fit skewness
+  as a nuisance parameter.
+- **Mixture model**: Model the velocity distribution as a mixture
+  of Gaussians (low-dust + high-dust populations).
+- **Student-t**: Heavy-tailed distribution, robust to
+  non-Gaussianity. ν parameter absorbs excess kurtosis.
+- **Color split**: Fit fsigma8 separately for blue (c < 0) and
+  red (c > 0) SNe, then combine. Blue SNe have less dust → more
+  Gaussian.
+- **Forward model**: Explicitly model P23 scatter in the likelihood.
+  Marginalize over dust parameters per-SN.
+
+### Approach 2: Fix BBC
+
+BBC doesn't fully Gaussianize P23 residuals. Ideas:
+
+- **Higher-dimensional grid**: More parameters (x1, M_host).
+- **Asymmetric corrections**: Separate for c > 0 and c < 0.
+- **Color-dependent σ_int**: σ_int(c) instead of constant.
+- **Iterative BBC**: Run BBC, examine residuals, re-run.
+- **Population-aware BBC**: Separate corrections for high/low dust.
+
+### Approach 3: Combine both
+
+Fix BBC to reduce non-Gaussianity, then use a robust likelihood
+for the remainder.
+
+### What the paper found (Table 4)
+
+| Model | True vel. | Simple fit | BBC fit |
+|-------|-----------|-----------|---------|
+| S_COH | 0.990 | 1.000 ± 14% | 0.990 ± 14% |
+| S_G10 | 0.984 | 1.038 ± 13% | 1.026 ± 13% |
+| S_C11 | 0.991 | 1.052 ± 14% | 1.038 ± 13% |
+| S_P23 | 0.988 | **0.808 ± 15%** | **0.743 ± 11%** |
+
+The S_P23 row is what we need to fix. The true velocity fit gives
+unbiased results (~0.99), proving the velocity field itself is fine.
+The bias comes entirely from the non-Gaussian Hubble residuals.
+
+### SNANA validation
+
+Full SNANA simulation configs for reproducing Figure 6 exactly are
+in `snana_sims/`. Use these for validation but NOT for the iteration
+loop (too slow). The fast Python mock generator (`simulate.py`) is
+used for the agent's iteration loop.
+
+### Available packages
+
+numpy, scipy, iminuit. For MCMC, implement simple Metropolis-Hastings
+in pure numpy if needed.
+
+### Reference code
+
+- flip library: https://github.com/corentinravoux/flip
+- SNANA: https://github.com/RickKessler/SNANA
+- Pippin: https://github.com/dessn/Pippin
