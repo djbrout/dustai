@@ -524,19 +524,86 @@ the Student-$t$ without BBC ($+14\%$) outperforms Gaussian + BBC
 \label{fig:bbc_vs_studentt}
 \end{figure*}
 
-\subsection{Caveats}
+\subsection{Caveats and limitations}
+\label{sec:caveats}
 
-Our mocks are simplified compared to the full C25 pipeline: we
-do not simulate SALT3 light-curve fitting, survey selection
-effects, or Malmquist bias. This produces more extreme
-non-Gaussianity ($\kappa \approx 5$--7) than C25 ($\kappa
-\approx 1.6$), making our test more challenging. Testing on the
-full SNANA pipeline is an important next step.
+\textbf{The Student-$t$ handles kurtosis, not skewness.} The
+multivariate Student-$t$ is symmetric: it has heavy tails but
+zero skewness. The P23 residuals have \emph{both} skewness
+($\gamma \approx 1$) and kurtosis ($\kappa \approx 5$--8). The
+Student-$t$ works because the $f\sigma_8$ likelihood is based on
+$\chi^2 = \bm{v}^T \bm{C}^{-1} \bm{v}$, a sum of \emph{squared}
+terms that is insensitive to the sign of residuals. What biases
+$f\sigma_8$ is the excess of large-amplitude residuals (kurtosis),
+not their asymmetry (skewness). The skewness shifts the mean
+$\Delta\mu$, but this is absorbed by the Tripp $M_0$ parameter.
 
-The cosmological prior used in the fitting procedure is centered
-on the true $f\sigma_8$. In a blind analysis, the prior would come
-from external data (e.g.\ Planck), which would be broader and less
-informative.
+\textbf{$M_0$ is not in the likelihood.} The Tripp fit
+(step 1: $M_0, \alpha, \beta$) and the $f\sigma_8$ fit (step 2:
+velocity covariance) are sequential, not joint. $M_0$ absorbs
+the \emph{global} mean of the P23 bias, but it is a single
+number. If the P23 bias varies with redshift --- as it does,
+because the dust parameter $\tau$ is $z$-dependent --- $M_0$
+cannot absorb the $z$-dependent component. This residual creates
+a spurious radial velocity gradient that mimics $f\sigma_8$ signal.
+
+\textbf{Low-$z$ vs.\ wide-$z$ surveys.} For our low-$z$ PV
+survey ($z < 0.1$), $\tau$ varies by $\lesssim 25\%$ across the
+sample, and the $z$-dependent bias is small enough that the
+Student-$t$ alone suffices. For surveys spanning $z = 0.01$ to
+$z \sim 1$, the $z$-dependent mean shift would be large and
+the Student-$t$ alone would not correct it. In that regime,
+both the Student-$t$ (for the shape) and a $z$-dependent
+correction such as BBC or $z$-binned Tripp fitting (for the
+mean) would be needed. This is the correct complementary role
+for BBC: correcting the $z$-dependent mean bias that $M_0$
+cannot absorb, while the Student-$t$ handles the non-Gaussian
+shape that BBC cannot fix.
+
+\textbf{Simplified mocks.} Our SNANA test uses 2125 SALT3-fitted
+SNe (partial results; the full 81k-SN run is ongoing). The
+cosmological prior is centered on the true $f\sigma_8$; in a
+blind analysis it would come from external data.
+
+\subsection{Beyond the Student-$t$: skew-$t$ and forward models}
+\label{sec:beyond}
+
+The symmetric Student-$t$ is a pragmatic first step, not the
+optimal solution. Two natural extensions would capture the
+skewness that the Student-$t$ ignores:
+
+\textbf{Multivariate skew-$t$.} The skew-$t$ distribution
+(Azzalini \& Capitanio 2003) extends the Student-$t$ with a
+skewness vector $\bm{\delta}$ that allows asymmetric tails.
+The P23 skewness parameter could be estimated from the data
+alongside $\nu$. The challenge is computational: the
+multivariate skew-$t$ density involves the CDF of a
+$(N{+}1)$-variate $t$-distribution, which is expensive for
+$N \sim 6000$ SNe.
+
+\textbf{Forward model.} A more principled approach would
+build the P23 dust model directly into the likelihood. For
+each SN with observed color $c$ and host mass $M$, one would
+marginalize over the latent decomposition $c = c_\mathrm{int}
++ E_\mathrm{dust}$ using the known P23 priors:
+\begin{equation}
+p(v_i \mid f\sigma_8) = \int p(v_i \mid E_\mathrm{dust},
+f\sigma_8)\,p(E_\mathrm{dust} \mid c_i, M_i)\,
+dE_\mathrm{dust}.
+\label{eq:forward}
+\end{equation}
+This would correctly model both the skewness and kurtosis
+for each SN, and would naturally produce $z$-dependent
+corrections because the dust priors are $z$-dependent. The
+challenge is that the per-SN marginalization breaks the
+multivariate structure of the velocity covariance, requiring
+either approximations or MCMC sampling.
+
+Both extensions are computationally more demanding but would
+address the residual $+8$--$14\%$ bias that the symmetric
+Student-$t$ leaves. We leave their implementation to future
+work and note that the Student-$t$ already recovers $f\sigma_8$
+to within $1\sigma$ of the fiducial for all Uchuu mocks tested.
 
 % ====================================================================
 \section{Conclusions}
