@@ -676,7 +676,7 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     except np.linalg.LinAlgError:
         sigma_prior = 0.15 * fsigma8_prior  # fallback
     # Ensure reasonable bounds
-    sigma_prior = np.clip(sigma_prior, 0.05 * fsigma8_prior, 0.25 * fsigma8_prior)
+    sigma_prior = np.clip(sigma_prior, 0.05 * fsigma8_prior, 0.50 * fsigma8_prior)
 
     def _prior_penalty(ln_fsigma8):
         """Gaussian prior on fsigma8 from input cosmology."""
@@ -780,17 +780,9 @@ def _fit_iminuit(velocities, positions, C_obs, cosmo_params,
     fm = gauss_cost_ci(ln_fs8_fit - eps, sigma_v_fit)
     d2 = (fp - 2.0 * f0 + fm) / eps ** 2
     sigma_ln = 1.0 / np.sqrt(max(d2, 1e-10))
-    # Jensen's inequality correction (Duan 1983): when estimating
-    # fsigma8 = exp(ln_fsigma8_hat), the exponentiation introduces a
-    # positive bias E[exp(X)] = exp(E[X] + var(X)/2) > exp(E[X]).
-    # Correct by the factor exp(-sigma^2/2). This is standard for
-    # log-space estimators and is data-driven (uses the Hesse sigma).
-    fsigma8_fit *= np.exp(-0.5 * sigma_ln ** 2)
     sigma_fsigma8 = fsigma8_fit * sigma_ln
 
-    # 68% CI stays at the original log-space position (uncorrected)
-    # to maintain calibrated coverage. The correction only affects
-    # the point estimate, not the CI bounds.
+    # 68% CI via log-space (asymmetric in linear space)
     ci_68 = (np.exp(ln_fs8_fit - sigma_ln),
              np.exp(ln_fs8_fit + sigma_ln))
 
