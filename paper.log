@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  20 MAR 2026 06:47
+This is pdfTeX, Version 3.141592653-2.6-1.40.29 (TeX Live 2026/Homebrew) (preloaded format=pdflatex 2026.3.4)  20 MAR 2026 08:09
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -506,7 +506,7 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 67.
 
-<fig_hubble_diagram.pdf, id=92, 1001.76443pt x 314.52191pt>
+<fig_hubble_diagram.pdf, id=96, 1001.76443pt x 314.52191pt>
 File: fig_hubble_diagram.pdf Graphic file (type pdf)
 <use fig_hubble_diagram.pdf>
 Package pdftex.def Info: fig_hubble_diagram.pdf  used on input line 122.
@@ -528,7 +528,7 @@ map/pdftex.map}
 
 {/opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/enc/dvips/cm-supe
 r/cm-super-ts1.enc}]
-<fig_weighting.pdf, id=125, 497.4193pt x 312.68806pt>
+<fig_weighting.pdf, id=129, 497.4193pt x 312.68806pt>
 File: fig_weighting.pdf Graphic file (type pdf)
 <use fig_weighting.pdf>
 Package pdftex.def Info: fig_weighting.pdf  used on input line 181.
@@ -570,7 +570,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 277--279
 cmr/m/n/9 ) =
  []
 
-<fig_uchuu_residuals.pdf, id=290, 714.27791pt x 278.38692pt>
+<fig_uchuu_residuals.pdf, id=295, 714.27791pt x 278.38692pt>
 File: fig_uchuu_residuals.pdf Graphic file (type pdf)
 <use fig_uchuu_residuals.pdf>
 Package pdftex.def Info: fig_uchuu_residuals.pdf  used on input line 322.
@@ -591,12 +591,12 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 347.
 
-<fig_uchuu_fsigma8.pdf, id=293, 713.47578pt x 352.08537pt>
+<fig_uchuu_fsigma8.pdf, id=298, 713.47578pt x 352.08537pt>
 File: fig_uchuu_fsigma8.pdf Graphic file (type pdf)
 <use fig_uchuu_fsigma8.pdf>
 Package pdftex.def Info: fig_uchuu_fsigma8.pdf  used on input line 364.
 (pdftex.def)             Requested size: 244.0pt x 120.40585pt.
-<fig_uchuu_summary.pdf, id=297, 568.87158pt x 351.77936pt>
+<fig_uchuu_summary.pdf, id=302, 568.87158pt x 351.77936pt>
 File: fig_uchuu_summary.pdf Graphic file (type pdf)
 <use fig_uchuu_summary.pdf>
 Package pdftex.def Info: fig_uchuu_summary.pdf  used on input line 411.
@@ -623,48 +623,68 @@ Package hyperref Warning: Token not allowed in a PDF string (Unicode):
 (hyperref)                removing `math shift' on input line 449.
 
 
+LaTeX Warning: Reference `fig:full_story' on page 4 undefined on input line 451
+.
+
+<fig_full_story.pdf, id=378, 1050.00276pt x 950.25565pt>
+File: fig_full_story.pdf Graphic file (type pdf)
+<use fig_full_story.pdf>
+Package pdftex.def Info: fig_full_story.pdf  used on input line 494.
+(pdftex.def)             Requested size: 508.0pt x 459.72795pt.
+
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 467.
+(hyperref)                removing `math shift' on input line 508.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 467.
+(hyperref)                removing `math shift' on input line 508.
 
 [4
 pdfTeX warning (ext4): destination with the same identifier (name{figure.4}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.506 
+l.530 
       
 pdfTeX warning (ext4): destination with the same identifier (name{table.2}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.506 
+l.530 
       
 pdfTeX warning (ext4): destination with the same identifier (name{figure.5}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.506 
+l.530 
       
 pdfTeX warning (ext4): destination with the same identifier (name{table.3}) has
  been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.506 
+l.530 
        <./fig_uchuu_fsigma8.pdf> <./fig_uchuu_summary.pdf>]
-<fig_bbc_vs_studentt.pdf, id=515, 1003.18227pt x 313.20198pt>
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+<fig_bbc_vs_studentt.pdf, id=518, 1003.18227pt x 313.20198pt>
 File: fig_bbc_vs_studentt.pdf Graphic file (type pdf)
 <use fig_bbc_vs_studentt.pdf>
-Package pdftex.def Info: fig_bbc_vs_studentt.pdf  used on input line 514.
+Package pdftex.def Info: fig_bbc_vs_studentt.pdf  used on input line 555.
 (pdftex.def)             Requested size: 508.0pt x 158.60303pt.
 
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [5
+pdfTeX warning (ext4): destination with the same identifier (name{figure.6}) ha
+s been already used, duplicate ignored
+<argument> ...shipout:D \box_use:N \l_shipout_box 
+                                                  \__shipout_drop_firstpage_...
+l.566 \end{figure*}
+                    <./fig_full_story.pdf>]
 ! Undefined control sequence.
 <recently read> \lesssim 
                          
-l.551 ...y ($z < 0.1$), $\tau$ varies by $\lesssim
+l.592 ...y ($z < 0.1$), $\tau$ varies by $\lesssim
                                                    25\%$ across the
 The control sequence at the end of the top line
 of your error message was never \def'ed. If you have
@@ -674,29 +694,29 @@ and I'll forget about whatever was undefined.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 568.
+(hyperref)                removing `math shift' on input line 609.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 568.
+(hyperref)                removing `math shift' on input line 609.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 568.
+(hyperref)                removing `math shift' on input line 609.
 
 
 Package hyperref Warning: Token not allowed in a PDF string (Unicode):
-(hyperref)                removing `math shift' on input line 568.
+(hyperref)                removing `math shift' on input line 609.
 
-[5]
+[6]
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
- [6
-pdfTeX warning (ext4): destination with the same identifier (name{figure.6}) ha
+ [7
+pdfTeX warning (ext4): destination with the same identifier (name{figure.7}) ha
 s been already used, duplicate ignored
 <argument> ...shipout:D \box_use:N \l_shipout_box 
                                                   \__shipout_drop_firstpage_...
-l.639 \end{document}
+l.680 \end{document}
                      <./fig_bbc_vs_studentt.pdf>] (./paper.aux)
  ***********
 LaTeX2e <2025-11-01>
@@ -708,6 +728,9 @@ LaTeX Font Warning: Size substitutions with differences
 (Font)              up to 1.28pt have occurred.
 
 
+LaTeX Warning: There were undefined references.
+
+
 LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
 
 
@@ -716,14 +739,14 @@ Package rerunfilecheck Warning: File `paper.out' has changed.
 (rerunfilecheck)                or use package `bookmark'.
 
 Package rerunfilecheck Info: Checksums for `paper.out':
-(rerunfilecheck)             Before: 9121310700A1F6C45BDEFBDA8558CB50;3448
-(rerunfilecheck)             After:  90E416EAAD7D075AC14A22D0C75B7F6C;3845.
+(rerunfilecheck)             Before: 90E416EAAD7D075AC14A22D0C75B7F6C;3845
+(rerunfilecheck)             After:  7F2D11DFDDF43358DED85F6F9711529C;3934.
  ) 
 Here is how much of TeX's memory you used:
- 11049 strings out of 467525
- 167992 string characters out of 5408440
- 617579 words of memory out of 5000000
- 39771 multiletter control sequences out of 15000+600000
+ 11060 strings out of 467525
+ 168236 string characters out of 5408440
+ 617663 words of memory out of 5000000
+ 39780 multiletter control sequences out of 15000+600000
  645282 words of font info for 99 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
  90i,10n,93p,1010b,403s stack positions out of 10000i,1000n,20000p,200000b,200000s
@@ -761,10 +784,10 @@ public/amsfonts/cm/cmsy6.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf
 .pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/fonts/type1/public
 /amsfonts/cm/cmti9.pfb></opt/homebrew/Cellar/texlive/20260301/share/texmf-dist/
 fonts/type1/public/cm-super/sfrm0800.pfb>
-Output written on paper.pdf (6 pages, 664288 bytes).
+Output written on paper.pdf (7 pages, 786930 bytes).
 PDF statistics:
- 755 PDF objects out of 1000 (max. 8388607)
- 326 compressed objects within 4 object streams
- 56 named destinations out of 1000 (max. 500000)
- 199 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 997 PDF objects out of 1000 (max. 8388607)
+ 355 compressed objects within 4 object streams
+ 58 named destinations out of 1000 (max. 500000)
+ 212 words of extra memory for PDF output out of 10000 (max. 10000000)
 

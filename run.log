@@ -1,30 +1,30 @@
 dustai evaluation: 4 mocks, 1500 SNe each, model=P23
 Fiducial fsigma8 = 0.4276
 
-  Mock 1/4: fsigma8=0.6372 +/- 0.1617  [0.4944, 0.8212]  (11.0s)
-  Mock 2/4: fsigma8=0.3797 +/- 0.1715  [0.2418, 0.5965]  (27.3s)
-  Mock 3/4: fsigma8=0.4648 +/- 0.1431  [0.3417, 0.6324]  (20.3s)
-  Mock 4/4: fsigma8=0.3055 +/- 0.1707  [0.1747, 0.5341]  (17.1s)
+  Mock 1/4: fsigma8=0.5391 +/- 0.1526  [0.4062, 0.7155]  (18.8s)
+  Mock 2/4: fsigma8=0.4711 +/- 0.1568  [0.3377, 0.6571]  (29.2s)
+  Mock 3/4: fsigma8=0.5065 +/- 0.1525  [0.3749, 0.6844]  (29.6s)
+  Mock 4/4: fsigma8=0.3489 +/- 0.1624  [0.2190, 0.5556]  (20.6s)
 
 ---
-final_score:      1.143120
-bias:             0.044916
-abs_bias:         0.044916
-coverage_68:      0.7500
-mean_width_rel:   0.7785
-mean_fsigma8:     0.446805
-std_fsigma8:      0.123516
+final_score:      1.839016
+bias:             0.090734
+abs_bias:         0.090734
+coverage_68:      1.0000
+mean_width_rel:   0.7453
+mean_fsigma8:     0.466397
+std_fsigma8:      0.071995
 fsigma8_fid:      0.427599
 n_mocks:          4
-total_seconds:    75.8
+total_seconds:    98.2
 
 Score breakdown:
-  bias_term:      0.224578  (w=5.0, |bias|=0.0449)
-  coverage_term:  0.140000  (w=2.0, |cov-0.68|=0.0700)
-  width_term:     0.778542  (w=1.0, rel_width=0.7785)
+  bias_term:      0.453671  (w=5.0, |bias|=0.0907)
+  coverage_term:  0.640000  (w=2.0, |cov-0.68|=0.3200)
+  width_term:     0.745346  (w=1.0, rel_width=0.7453)
 
 Per-mock results:
-  seed= 1000  fsigma8=0.6372 [0.4944, 0.8212]  covers_fid=N
-  seed= 1137  fsigma8=0.3797 [0.2418, 0.5965]  covers_fid=Y
-  seed= 1274  fsigma8=0.4648 [0.3417, 0.6324]  covers_fid=Y
-  seed= 1411  fsigma8=0.3055 [0.1747, 0.5341]  covers_fid=Y
+  seed= 1000  fsigma8=0.5391 [0.4062, 0.7155]  covers_fid=Y
+  seed= 1137  fsigma8=0.4711 [0.3377, 0.6571]  covers_fid=Y
+  seed= 1274  fsigma8=0.5065 [0.3749, 0.6844]  covers_fid=Y
+  seed= 1411  fsigma8=0.3489 [0.2190, 0.5556]  covers_fid=Y
