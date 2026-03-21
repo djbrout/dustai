@@ -1,10 +1,10 @@
 dustai evaluation: 4 mocks, 1500 SNe each, model=P23
 Fiducial fsigma8 = 0.4276
 
-  Mock 1/4: fsigma8=0.5391 +/- 0.1526  [0.4062, 0.7155]  (18.8s)
-  Mock 2/4: fsigma8=0.4711 +/- 0.1568  [0.3377, 0.6571]  (29.2s)
-  Mock 3/4: fsigma8=0.5065 +/- 0.1525  [0.3749, 0.6844]  (29.6s)
-  Mock 4/4: fsigma8=0.3489 +/- 0.1624  [0.2190, 0.5556]  (20.6s)
+  Mock 1/4: fsigma8=0.5391 +/- 0.1526  [0.4062, 0.7155]  (16.4s)
+  Mock 2/4: fsigma8=0.4711 +/- 0.1568  [0.3377, 0.6571]  (24.5s)
+  Mock 3/4: fsigma8=0.5065 +/- 0.1525  [0.3749, 0.6844]  (24.3s)
+  Mock 4/4: fsigma8=0.3489 +/- 0.1624  [0.2190, 0.5556]  (16.2s)
 
 ---
 final_score:      1.839016
@@ -16,7 +16,7 @@ mean_fsigma8:     0.466397
 std_fsigma8:      0.071995
 fsigma8_fid:      0.427599
 n_mocks:          4
-total_seconds:    98.2
+total_seconds:    81.4
 
 Score breakdown:
   bias_term:      0.453671  (w=5.0, |bias|=0.0907)
