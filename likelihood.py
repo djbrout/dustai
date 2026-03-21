@@ -162,31 +162,20 @@ def _velocity_damping(k, sigma_u):
 
 def _compute_window_components(k_arr, Ptt_arr, sigma_u, r_ij, cos_alpha,
                                r_i=0.0, r_j=0.0):
-    """Compute the W_ij integral from Carreres+2025 Eq. 36.
+    """Compute the W_ij integral matching flip's actual implementation.
 
-    Uses the exact window function for line-of-sight velocity
-    covariance from C25 Eq. 36:
+    Uses the formula from the flip library (C25's code), which
+    parameterizes in terms of the bisector angle phi rather than
+    sin^2(alpha). The angular terms are:
 
-        W_ij = 1/3 [j0(kr) - 2 j2(kr)] cos(alpha)
-               + r_i r_j / r_ij^2  j2(kr) sin^2(alpha)
+        N_0(theta) = cos(theta) / 3
+        N_2(theta, phi) = cos(2*phi)/2 + cos(theta)/6
 
-    Parameters
-    ----------
-    k_arr, Ptt_arr : arrays
-        Power spectrum table.
-    sigma_u : float
-        Velocity damping scale in Mpc/h.
-    r_ij : float
-        3D separation between the two SNe in Mpc/h.
-    cos_alpha : float
-        Cosine of the angle between the two line-of-sight directions.
-    r_i, r_j : float
-        Comoving distances to each SN in Mpc/h.
+    where theta = angular separation, phi = bisector angle.
 
-    Returns
-    -------
-    C_vv_element : float
-        Unnormalised covariance element (needs H0^2 prefactor).
+    Note: C25 Eq. 36 in the paper has a sign difference on the j_2
+    term compared to flip's code. We follow the code (flip), which
+    is what actually produces C25's results.
     """
     Du = _velocity_damping(k_arr, sigma_u)
 
@@ -196,16 +185,21 @@ def _compute_window_components(k_arr, Ptt_arr, sigma_u, r_ij, cos_alpha,
         return np.trapz(integrand, k_arr) / (2.0 * np.pi ** 2)
 
     kr = k_arr * r_ij
-    sin2_alpha = 1.0 - cos_alpha ** 2
+    theta = np.arccos(np.clip(cos_alpha, -1.0, 1.0))
+
+    # Bisector angle phi (from flip's cov_utils.compute_phi_bisector_theorem)
+    sin_phi = (r_i + r_j) / r_ij * np.sin(theta / 2.0)
+    sin_phi = np.clip(sin_phi, -1.0, 1.0)
+    phi = np.arcsin(sin_phi)
 
     j0 = special.spherical_jn(0, kr)
     j2 = special.spherical_jn(2, kr)
 
-    # C25 Eq. 36 exactly
-    W = (1.0 / 3.0 * (j0 - 2.0 * j2) * cos_alpha
-         + r_i * r_j / (r_ij ** 2) * j2 * sin2_alpha)
+    # flip's angular coefficients (from flip_terms.py N_vv)
+    N0 = cos_alpha / 3.0
+    N2 = 0.5 * np.cos(2.0 * phi) + cos_alpha / 6.0
 
-    integrand = Ptt_arr * Du ** 2 * W
+    integrand = Ptt_arr * Du ** 2 * (N0 * j0 + N2 * j2)
     return np.trapz(integrand, k_arr) / (2.0 * np.pi ** 2)
 
 
@@ -290,47 +284,60 @@ def compute_velocity_covariance(positions, fsigma8, sigma_u, cosmo_params):
     r_max = np.max(r_flat) * 1.01 + 1.0
     r_grid = np.linspace(0.0, r_max, n_r_grid)
 
-    F1_grid = np.zeros(n_r_grid)
-    F2_grid = np.zeros(n_r_grid)
+    # Precompute two 1D integrals: F_j0(r) and F_j2(r)
+    # flip's formula: W = N0*j_0 + N2*j_2 where
+    #   N0 = cos(theta)/3
+    #   N2 = cos(2*phi)/2 + cos(theta)/6
+    # So we need: F_j0(r) = int P Du^2 j_0(kr) dk/(2pi^2)
+    #             F_j2(r) = int P Du^2 j_2(kr) dk/(2pi^2)
+    Fj0_grid = np.zeros(n_r_grid)
+    Fj2_grid = np.zeros(n_r_grid)
 
-    # r=0: auto-correlation → W = 1/3, F1(0) = 1/3, F2(0) = 0
-    F1_grid[0] = np.trapz(base * (1.0 / 3.0), k_arr)
-    F2_grid[0] = 0.0
+    # r=0: j_0(0)=1, j_2(0)=0
+    Fj0_grid[0] = np.trapz(base, k_arr)
+    Fj2_grid[0] = 0.0
 
     for i_r in range(1, n_r_grid):
         rr = r_grid[i_r]
         kr = k_arr * rr
         j0 = special.spherical_jn(0, kr)
         j2 = special.spherical_jn(2, kr)
-        F1_grid[i_r] = np.trapz(base * (1.0 / 3.0 * (j0 - 2.0 * j2)), k_arr)
-        F2_grid[i_r] = np.trapz(base * j2, k_arr)
+        Fj0_grid[i_r] = np.trapz(base * j0, k_arr)
+        Fj2_grid[i_r] = np.trapz(base * j2, k_arr)
 
     # 1D interpolators
-    F1_interp = interpolate.interp1d(r_grid, F1_grid, kind='cubic',
-                                      bounds_error=False, fill_value=0.0)
-    F2_interp = interpolate.interp1d(r_grid, F2_grid, kind='cubic',
-                                      bounds_error=False, fill_value=0.0)
+    Fj0_interp = interpolate.interp1d(r_grid, Fj0_grid, kind='cubic',
+                                       bounds_error=False, fill_value=0.0)
+    Fj2_interp = interpolate.interp1d(r_grid, Fj2_grid, kind='cubic',
+                                       bounds_error=False, fill_value=0.0)
 
-    # Evaluate for all pairs using C25 Eq. 36
+    # Evaluate for all pairs using flip's formula
     C_vv = np.zeros((N, N))
     i_upper, j_upper = np.triu_indices(N, k=0)
 
     r_ij_vals = sep_3d[i_upper, j_upper]
     cos_alpha_vals = cos_sep[i_upper, j_upper]
-    sin2_alpha_vals = 1.0 - cos_alpha_vals ** 2
     r_i_vals = r_com[i_upper]
     r_j_vals = r_com[j_upper]
 
-    F1_vals = F1_interp(r_ij_vals)
-    F2_vals = F2_interp(r_ij_vals)
+    Fj0_vals = Fj0_interp(r_ij_vals)
+    Fj2_vals = Fj2_interp(r_ij_vals)
 
-    # Geometric factor: r_i * r_j / r_ij^2, handle r_ij=0 (auto-corr)
+    # Compute bisector angle phi for each pair
+    theta_vals = np.arccos(np.clip(cos_alpha_vals, -1.0, 1.0))
     with np.errstate(divide='ignore', invalid='ignore'):
-        geom = np.where(r_ij_vals > 1e-6,
-                        r_i_vals * r_j_vals / (r_ij_vals ** 2),
-                        0.0)
+        sin_phi = np.where(r_ij_vals > 1e-6,
+                           (r_i_vals + r_j_vals) / r_ij_vals
+                           * np.sin(theta_vals / 2.0),
+                           0.0)
+    sin_phi = np.clip(sin_phi, -1.0, 1.0)
+    phi_vals = np.arcsin(sin_phi)
 
-    vals = cos_alpha_vals * F1_vals + geom * sin2_alpha_vals * F2_vals
+    # flip angular coefficients
+    N0_vals = cos_alpha_vals / 3.0
+    N2_vals = 0.5 * np.cos(2.0 * phi_vals) + cos_alpha_vals / 6.0
+
+    vals = N0_vals * Fj0_vals + N2_vals * Fj2_vals
 
     C_vv[i_upper, j_upper] = vals
     C_vv[j_upper, i_upper] = vals  # symmetric
