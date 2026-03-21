@@ -1,0 +1,130 @@
+DOCUMENTATION:
+  OVERVIEW:
+    TIME_START:   2026-03-21  07:02  # UT
+    SURVEY:       LSST
+    GENMODEL:     SALT3.K21
+    SNIA:         True
+    HOST_MACHINE: (null)
+    USERNAME:     server
+    SNDATA_ROOT:  /Volumes/External24TB/snana_install/SNDATA_ROOT
+    SNANA_DIR:     /Volumes/External24TB/snana_install/SNANA
+    SNANA_VERSION: 9b4e3e2
+    CWD:   /Volumes/External24TB/dustai/snana_sims
+    INPUT_FILE:
+    - sim_SP23_fast.input
+# 
+  INPUT_KEYS:
+# Output data
+    GENVERSION:              DUSTAI_SP23_FAST
+    NGENTOT_LC:              15000  
+    FORMAT_MASK:             48  #  += 2,32,16 -> TEXT, FITS, randomCID
+    WRFLAG_MODELPAR:         1  
+    GENTYPE:                 1  # true type
+    SNTYPE:                  1  101  # spec Type, photID type
+    CIDRAN_MIN:              0  
+    CIDRAN_MAX:              3000000  
+# Source model
+    GENMODEL:                SALT3.K21 
+# Cosmology inputs
+    OMEGA_MATTER:            0.3089  
+    OMEGA_LAMBDA:            0.6911  
+    w0_LAMBDA:               -1.0000  
+    wa_LAMBDA:               0  
+# Instrumental inputs
+    GENFILTERS:          griz 
+    CALIB_FILE:          $SNDATA_ROOT/kcor/LSST/baseline/kcor_LSST.fits.gz    # aka KCOR_FILE
+    SIMLIB_FILE:             $SNDATA_ROOT/simlib/LSST/LSST_DC2_Run2.2i_WFD.SIMLIB 
+    SMEARFLAG_FLUX:      1  # 1->add Poisson noise
+    SMEARFLAG_ZEROPT:    1  # +=1->apply scatter, +=2->add to FLUXERRCAL
+# SEARCHEFF/detections
+    SEARCHEFF_PIPELINE_LOGIC_FILE:  NONE
+    NEWMJD_DIF:              7.0000e-03  # day-sep if > 1 detections required
+    SEARCHEFF_PIPELINE_EFF_FILE:  NONE
+    SEARCHEFF_SPEC_FILE:     NONE
+    SEARCHEFF_zHOST_FILE:    NONE
+    APPLY_SEARCHEFF_OPT:     0  # += 1,2,4 => pipe,spec,zhost
+# Redshift inputs
+    GENRANGE_REDSHIFT:       0.0200  0.1000  
+    GENSIGMA_REDSHIFT:       0  
+    GENSIGMA_VPEC:           300.0000  # true vpec scatter (km/sec)
+    VPEC_ERR:                300.0000  # vpec error after correction (km/sec)
+# Epoch & sky coverage inputs
+    GENRANGE_PEAKMJD:        60000.0000  61825.0000  
+    GENRANGE_TREST:          -40.0000  100.0000  
+    SOLID_ANGLE:             0.5000  
+# Galactic extinction
+    OPT_MWEBV:        1   
+    OPT_MWCOLORLAW:   99   
+    RV_MWCOLORLAW:           3.1 
+# Population and rate-model params
+    GENPEAK_SALT2x1:         0  
+    GENSIGMA_SALT2x1:        1.0000  1.0000  
+    GENRANGE_SALT2x1:        -5.0000  5.0000  
+    GENPEAK_SALT2c:          -0.0700  
+    GENSIGMA_SALT2c:         0.0500  0.0500  
+    GENRANGE_SALT2c:         -0.3000  0.5000  
+    GENPEAK_SALT2ALPHA:      0.1500  
+    GENSIGMA_SALT2ALPHA:     0  0  
+    GENRANGE_SALT2ALPHA:     1.0000e-03  0.4000  
+    GENPEAK_SALT2BETA:       2.0700  
+    GENSIGMA_SALT2BETA:      0.2200  0.2200  
+    GENRANGE_SALT2BETA:      0.5000  9.9000  
+    GENTAU_AV:               0.1100  
+    GENRANGE_AV:             0  3.0000  
+    GENPEAK_RV:              1.6600  
+    GENSIGMA_RV:             0.9500  0.9500  
+    GENRANGE_RV:             0.5000  6.0000  
+    DNDZ:                    POWERLAW 2.6E-5 2.0 
+# Misc inputs
+    GENSOURCE:               RANDOM
+    PATH_SNDATA_SIM:         /Volumes/External24TB/dustai/snana_sims/output_fast
+    RANSEED:                 12345  
+    DEBUG_FLAG:              0  
+    CIDOFF:                  0 
+    SIMGEN_DUMP:             11 CID GENTYPE GENZ PEAKMJD SALT2x1 SALT2c SIM_mB SNRMAX AV RV MU 
+# CUTWIN inputs
+    APPLY_CUTWIN_OPT:        1  
+    CUTWIN_SNRMAX:           5 griz 1 -20. 80. 
+    CUTWIN_NEPOCH:           3 -5. 
+    CUTWIN_TRESTMIN:         -15 +10 
+    CUTWIN_TRESTMAX:         +5 +45 
+    CUTWIN_MWEBV:            0 0.25 
+# 
+  FILTERS:   # mean wavelength (A)
+    g:  4805.8
+    r:  6221.5
+    i:  7559.2
+    z:  8680.6
+# 
+  INPUT_NOTES:
+  - Poisson noise is ON 
+  - Reported flux-uncertainty includes SKY+GALAXY+SOURCE
+  - SB-dependent flux scatter is OFF
+  -  POWERLAW RATE MODEL:  2.60e-05*(1+z)^2.00  (0.0 < z < 10.0) 
+  -     MODEL_RATE(z=0.02) = 2.705e-05/Mpc^3/yr  dV/dz=3.403e+07   
+  -  Calculated Number of EVENTS per season =  1864 
+  - H0 =  67.74 km/s/Mpc 
+  - Omega_{M,L} =  0.309, 0.691     w0,wa = -1.00,0.000
+  - APPLY_SEARCHEFF_OPT=0 --> No trigger requirements 
+  - PIPELINE requires 0 detections among  (MJD dif > 0.0070 days) 
+#
+  GENTYPE_TO_NAME:  # GENTYPE:  [non]Ia   type  
+    1:  Ia       SALT3.K21
+# 
+  OUTPUT_SUMMARY:
+    RANDOM_SYNC: 
+    - List=1  FIRST=0.178395  LAST=0.615145   AVG(wrap) = 0.3 +_ 0.2 
+    - List=2  FIRST=0.279348  LAST=0.274389   AVG(wrap) = 0.2 +_ 0.1 
+    - List=3  FIRST=0.218715  LAST=0.381162   AVG(wrap) = 0.0 +_ 0.0 
+# 
+    CPU_MINUTES:       0.57  
+    NGENEV_TOT:        15000    # (441/sec, total events)
+    NGENLC_TOT:        15000    # (441/sec, total LC)
+    NGENLC_WRITE:      6089    # (179/sec, LC passing trigger)
+    NGENSPEC_WRITE:    0  
+    EFF(SEARCH+CUTS):  0.4059 +-  0.0040
+    NACCEPT:  [ 6089, 0, 0 ]   # NSN(ACCEPT) for [ SpecID, noSpecID, zHOST]
+    NGEN_PER_SEASON:   1864       # NSN(GENLC) in GENRANGE(z,MJD,dOmega)
+    NACC_PER_SEASON:   757 +_ 10  # NSN(ACCEPT) per season  after trigger+cuts
+    NREJECT:  [0,   4863, 0, 4048]   # [GENRANGE,   NEP<3, SEARCHEFF, CUTWIN] 
+DOCUMENTATION_END:
