@@ -323,19 +323,19 @@ def compute_velocity_covariance(positions, fsigma8, sigma_u, cosmo_params):
     Fj0_vals = Fj0_interp(r_ij_vals)
     Fj2_vals = Fj2_interp(r_ij_vals)
 
-    # Compute bisector angle phi for each pair
-    theta_vals = np.arccos(np.clip(cos_alpha_vals, -1.0, 1.0))
+    # Compute cos(2*phi) directly without trig (fast for large N):
+    # sin(phi) = (r_i+r_j)/r_ij * sin(theta/2)
+    # cos(2*phi) = 1 - 2*sin^2(phi) = 1 - (r_i+r_j)^2/r_ij^2 * (1-cos_theta)
     with np.errstate(divide='ignore', invalid='ignore'):
-        sin_phi = np.where(r_ij_vals > 1e-6,
-                           (r_i_vals + r_j_vals) / r_ij_vals
-                           * np.sin(theta_vals / 2.0),
-                           0.0)
-    sin_phi = np.clip(sin_phi, -1.0, 1.0)
-    phi_vals = np.arcsin(sin_phi)
+        rsum_sq_over_rsep_sq = np.where(
+            r_ij_vals > 1e-6,
+            (r_i_vals + r_j_vals) ** 2 / (r_ij_vals ** 2),
+            0.0)
+    cos_2phi = 1.0 - rsum_sq_over_rsep_sq * (1.0 - cos_alpha_vals)
 
-    # flip angular coefficients
+    # flip angular coefficients (no trig needed)
     N0_vals = cos_alpha_vals / 3.0
-    N2_vals = 0.5 * np.cos(2.0 * phi_vals) + cos_alpha_vals / 6.0
+    N2_vals = 0.5 * cos_2phi + cos_alpha_vals / 6.0
 
     vals = N0_vals * Fj0_vals + N2_vals * Fj2_vals
 
