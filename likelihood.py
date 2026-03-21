@@ -160,20 +160,15 @@ def _velocity_damping(k, sigma_u):
     return np.sinc(x / np.pi)  # np.sinc(t) = sin(pi*t)/(pi*t)
 
 
-def _compute_window_components(k_arr, Ptt_arr, sigma_u, r, cos_theta):
-    """Compute the W_ij integral from Eq. 36 for a pair of SNe.
+def _compute_window_components(k_arr, Ptt_arr, sigma_u, r_ij, cos_alpha,
+                               r_i=0.0, r_j=0.0):
+    """Compute the W_ij integral from Carreres+2025 Eq. 36.
 
-    The velocity covariance between two SNe at comoving distances
-    r_i, r_j with angular separation theta is:
+    Uses the exact window function for line-of-sight velocity
+    covariance from C25 Eq. 36:
 
-        C^vv_ij = (H_0 f sigma_8)^2 / (2 pi^2)
-                  * integral dk  P_tt(k)/(f sigma8)^2
-                    * D_u(k)^2 * [j0 terms + j2 terms]
-
-    Since we pre-factor by fsigma8^2, we compute the integral
-    without the (f sigma8)^2 prefactor (it's already in Ptt).
-
-    Here we use the simplified monopole+quadrupole decomposition.
+        W_ij = 1/3 [j0(kr) - 2 j2(kr)] cos(alpha)
+               + r_i r_j / r_ij^2  j2(kr) sin^2(alpha)
 
     Parameters
     ----------
@@ -181,35 +176,36 @@ def _compute_window_components(k_arr, Ptt_arr, sigma_u, r, cos_theta):
         Power spectrum table.
     sigma_u : float
         Velocity damping scale in Mpc/h.
-    r : float
-        Separation between the two SNe in Mpc/h.
-    cos_theta : float
+    r_ij : float
+        3D separation between the two SNe in Mpc/h.
+    cos_alpha : float
         Cosine of the angle between the two line-of-sight directions.
+    r_i, r_j : float
+        Comoving distances to each SN in Mpc/h.
 
     Returns
     -------
     C_vv_element : float
-        Unnormalised covariance element (needs H0^2/(2 pi^2) prefactor).
+        Unnormalised covariance element (needs H0^2 prefactor).
     """
     Du = _velocity_damping(k_arr, sigma_u)
 
-    if r < 1e-6:
-        # Auto-correlation: only monopole contributes
-        integrand = Ptt_arr * Du ** 2 / (2.0 * np.pi ** 2)
-        return np.trapz(integrand, k_arr)
+    if r_ij < 1e-6:
+        # Auto-correlation: W_ii = 1/3
+        integrand = Ptt_arr * Du ** 2 / 3.0
+        return np.trapz(integrand, k_arr) / (2.0 * np.pi ** 2)
 
-    kr = k_arr * r
+    kr = k_arr * r_ij
+    sin2_alpha = 1.0 - cos_alpha ** 2
 
     j0 = special.spherical_jn(0, kr)
     j2 = special.spherical_jn(2, kr)
 
-    # Eq. 36: C_ij propto int dk P(k) Du^2 [A * j0(kr) + B * j2(kr)]
-    # where A and B depend on cos_theta (see Carreres+2025 Eq. 36).
-    # Simplified: the monopole part and the quadrupole part.
-    A = 1.0 / 3.0
-    B = (3.0 * cos_theta ** 2 - 1.0) * 2.0 / 3.0
+    # C25 Eq. 36 exactly
+    W = (1.0 / 3.0 * (j0 - 2.0 * j2) * cos_alpha
+         + r_i * r_j / (r_ij ** 2) * j2 * sin2_alpha)
 
-    integrand = Ptt_arr * Du ** 2 * (A * j0 + B * j2)
+    integrand = Ptt_arr * Du ** 2 * W
     return np.trapz(integrand, k_arr) / (2.0 * np.pi ** 2)
 
 
@@ -279,40 +275,62 @@ def compute_velocity_covariance(positions, fsigma8, sigma_u, cosmo_params):
     sep_sq = np.maximum(sep_sq, 0.0)
     sep_3d = np.sqrt(sep_sq)
 
-    # --- Build covariance on a grid and interpolate ---
-    # Unique-ish (r, cos_theta) pairs -- bin to a grid for speed
-    r_flat = sep_3d[np.triu_indices(N, k=0)]
-    cos_flat = cos_sep[np.triu_indices(N, k=0)]
+    # --- Build covariance using C25 Eq. 36 decomposition ---
+    # W_ij = cos(alpha) * F1(r_ij) + (r_i*r_j*sin^2(alpha)/r_ij^2) * F2(r_ij)
+    # where:
+    #   F1(r) = int dk P(k) Du^2 * 1/3*(j0(kr) - 2*j2(kr)) / (2*pi^2)
+    #   F2(r) = int dk P(k) Du^2 * j2(kr) / (2*pi^2)
+    # This decomposes the 3-variable problem into two 1D interpolations.
 
-    # Grid for interpolation
-    n_r_grid = 60
-    n_cos_grid = 30
+    Du = np.sinc(k_arr * sigma_u / np.pi)  # _velocity_damping
+    base = Ptt_unit * Du ** 2 / (2.0 * np.pi ** 2)
+
+    n_r_grid = 80
+    r_flat = sep_3d[np.triu_indices(N, k=0)]
     r_max = np.max(r_flat) * 1.01 + 1.0
     r_grid = np.linspace(0.0, r_max, n_r_grid)
-    cos_grid = np.linspace(-1.0, 1.0, n_cos_grid)
 
-    # Evaluate the window integral on the grid
-    W_grid = np.zeros((n_r_grid, n_cos_grid))
-    for i_r, rr in enumerate(r_grid):
-        for i_c, cc in enumerate(cos_grid):
-            W_grid[i_r, i_c] = _compute_window_components(
-                k_arr, Ptt_unit, sigma_u, rr, cc
-            )
+    F1_grid = np.zeros(n_r_grid)
+    F2_grid = np.zeros(n_r_grid)
 
-    # 2D interpolator
-    interp_func = interpolate.RegularGridInterpolator(
-        (r_grid, cos_grid), W_grid,
-        method='linear', bounds_error=False, fill_value=0.0
-    )
+    # r=0: auto-correlation → W = 1/3, F1(0) = 1/3, F2(0) = 0
+    F1_grid[0] = np.trapz(base * (1.0 / 3.0), k_arr)
+    F2_grid[0] = 0.0
 
-    # Evaluate for all pairs
+    for i_r in range(1, n_r_grid):
+        rr = r_grid[i_r]
+        kr = k_arr * rr
+        j0 = special.spherical_jn(0, kr)
+        j2 = special.spherical_jn(2, kr)
+        F1_grid[i_r] = np.trapz(base * (1.0 / 3.0 * (j0 - 2.0 * j2)), k_arr)
+        F2_grid[i_r] = np.trapz(base * j2, k_arr)
+
+    # 1D interpolators
+    F1_interp = interpolate.interp1d(r_grid, F1_grid, kind='cubic',
+                                      bounds_error=False, fill_value=0.0)
+    F2_interp = interpolate.interp1d(r_grid, F2_grid, kind='cubic',
+                                      bounds_error=False, fill_value=0.0)
+
+    # Evaluate for all pairs using C25 Eq. 36
     C_vv = np.zeros((N, N))
     i_upper, j_upper = np.triu_indices(N, k=0)
-    points = np.column_stack([
-        sep_3d[i_upper, j_upper],
-        cos_sep[i_upper, j_upper]
-    ])
-    vals = interp_func(points)
+
+    r_ij_vals = sep_3d[i_upper, j_upper]
+    cos_alpha_vals = cos_sep[i_upper, j_upper]
+    sin2_alpha_vals = 1.0 - cos_alpha_vals ** 2
+    r_i_vals = r_com[i_upper]
+    r_j_vals = r_com[j_upper]
+
+    F1_vals = F1_interp(r_ij_vals)
+    F2_vals = F2_interp(r_ij_vals)
+
+    # Geometric factor: r_i * r_j / r_ij^2, handle r_ij=0 (auto-corr)
+    with np.errstate(divide='ignore', invalid='ignore'):
+        geom = np.where(r_ij_vals > 1e-6,
+                        r_i_vals * r_j_vals / (r_ij_vals ** 2),
+                        0.0)
+
+    vals = cos_alpha_vals * F1_vals + geom * sin2_alpha_vals * F2_vals
 
     C_vv[i_upper, j_upper] = vals
     C_vv[j_upper, i_upper] = vals  # symmetric
